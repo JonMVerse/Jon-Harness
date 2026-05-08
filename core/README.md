@@ -68,11 +68,12 @@ Capabilities Claude invokes automatically when relevant.
 
 ## Hooks
 
-`hooks/hooks.json` registers a `PostToolUse` hook on `Write|Edit` that calls `scripts/rename-plan.sh`. The script:
+`hooks/hooks.json` registers a `PostToolUse` hook on `Write|Edit|MultiEdit` that calls `scripts/rename-plan.sh`. The script:
 
-- Moves new plan files out of `plans/.tmp/` into a dated, descriptively named folder (e.g. `plans/2024-01-15-user-authentication/plan.md`).
+- **Mirrors plan-mode files** from `~/.claude/plans/<slug>.md` into the running project's `plans/YYYY-MM-DD-<slug>/plan.md` (uses `$CLAUDE_PROJECT_DIR`). This is the primary path — it captures plans authored via Claude Code's plan mode into the repo automatically.
+- **Organises in-project drafts** at `<project>/plans/.tmp/<slug>.md` into the same dated-folder layout (sibling, not under `.tmp/`).
 - Creates and maintains `worklog.md` alongside each plan.
-- Keeps agent worklogs separate.
+- Routes agent worklogs (in-project flow) to `worklog-<id>.md` next to the parent plan.
 
 Setup details and the status-line config: [HOOKS.md](HOOKS.md).
 

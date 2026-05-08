@@ -19,7 +19,7 @@ See `README.md` for the user-facing harness overview and `core/README.md` for th
 - **New skill** → create `core/skills/<name>/SKILL.md` **and** add `./skills/<name>` to the `skills` array in `core/.claude-plugin/plugin.json`. Skipping the second step silently disables the skill.
 - **New agent / command** → drop a markdown file with `name` and `description` frontmatter into `core/agents/` or `core/commands/`. No registration step.
 - **Hook edits** → `core/hooks/hooks.json` must follow the documented PostToolUse matcher shape. This was broken twice in recent history (commits `c9aa0b3`, `0fda92d`) — verify against current Claude Code hook docs before changing.
-- **Plan files** → start at `plans/.tmp/<slug>.md`. The PostToolUse hook moves them to `plans/YYYY-MM-DD-<slug>/plan.md` and creates `worklog.md`. Don't create dated folders manually.
+- **Plan files** → the PostToolUse hook captures them automatically. Two sources: (1) Claude Code plan-mode artifacts at `~/.claude/plans/<slug>.md` are mirrored into `plans/YYYY-MM-DD-<slug>/plan.md` here (this is the primary case — just use plan mode); (2) in-project drafts at `plans/.tmp/<slug>.md` get the same treatment. Both grow a `worklog.md` alongside. Don't create dated folders manually.
 
 ## Versioning
 
