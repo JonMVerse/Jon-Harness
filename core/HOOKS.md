@@ -37,12 +37,16 @@ When the plugin is installed and enabled via `/plugin marketplace`, this file is
 
 ## What the script does
 
-`scripts/rename-plan.sh` reads the tool-call JSON from stdin, extracts `tool_input.file_path`, and acts only when the path matches `*/plans/.tmp/*.md`. Anything else exits 0 and the tool call proceeds normally.
+`scripts/rename-plan.sh` reads the tool-call JSON from stdin, extracts `tool_input.file_path`, and acts on either of two source paths. Anything else exits 0 and the tool call proceeds normally.
+
+**Source A — Claude Code plan-mode artifacts** at `~/.claude/plans/<slug>.md`. The hook mirrors these into the *running* project's `plans/` directory (resolved via `$CLAUDE_PROJECT_DIR`, which Claude Code sets on hook invocation). The original file is left in place — plan mode keeps owning it during the session — and the project gets a continuously-updated copy at `plans/YYYY-MM-DD-<slug>/plan.md`. **This is the primary path** — it's how plans authored in Claude Code's plan mode end up captured in the repo.
+
+**Source B — in-project drafts** at `<project>/plans/.tmp/<slug>.md`. Treated the same way, but the destination `plans/` dir is derived from the source path (sibling of `.tmp/`).
 
 For matching files:
 
 1. **First write of a plan** — reads the first 1500 chars, asks Claude (`claude -p`) for a 3-5 word snake_case slug, and creates `plans/YYYY-MM-DD-<slug>/plan.md` plus a fresh `worklog.md`. The chosen slug is cached in a `<file>.name` sidecar so subsequent edits route to the same folder without re-prompting.
-2. **Agent worklogs** — files named `<session>-agent-<id>.md` are routed to `plans/YYYY-MM-DD-<slug>/worklog-<id>.md` based on the parent session's namecard. If the parent plan hasn't been named yet, the worklog stashes in `plans/.tmp/pending/` and is adopted when the parent's folder is created.
+2. **Agent worklogs** (in-project flow only) — files named `<session>-agent-<id>.md` under `plans/.tmp/` are routed to `plans/YYYY-MM-DD-<slug>/worklog-<id>.md` based on the parent session's namecard. If the parent plan hasn't been named yet, the worklog stashes in `plans/.tmp/pending/` and is adopted when the parent's folder is created. Plan-mode files don't use this branch — plan mode is single-file.
 
 The hook is idempotent — re-editing a plan file copies the updated content into the same target folder.
 

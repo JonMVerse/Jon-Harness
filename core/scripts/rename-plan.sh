@@ -8,10 +8,20 @@ FILE=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); prin
 [ -z "$FILE" ] && exit 0
 FILE=$(realpath "$FILE" 2>/dev/null || echo "$FILE")
 
-# Only act on .md files directly inside plans/.tmp/
-[[ "$FILE" != */plans/.tmp/*.md ]] && exit 0
+# Two trigger paths:
+#   1. ~/.claude/plans/<slug>.md  — Claude Code plan-mode artifacts. Mirror into
+#      the running project's plans/ dir (located via $CLAUDE_PROJECT_DIR).
+#   2. <project>/plans/.tmp/<slug>.md — in-project drafts. Move into a dated
+#      sibling folder under the same plans/ dir.
+if [[ "$FILE" == */.claude/plans/*.md ]]; then
+  [ -z "${CLAUDE_PROJECT_DIR:-}" ] && exit 0
+  PLANS_DIR="${CLAUDE_PROJECT_DIR}/plans"
+elif [[ "$FILE" == */plans/.tmp/*.md ]]; then
+  PLANS_DIR=$(dirname "$(dirname "$FILE")")  # .../plans/
+else
+  exit 0
+fi
 
-PLANS_DIR=$(dirname "$(dirname "$FILE")")  # .../plans/
 BASENAME=$(basename "$FILE" .md)
 
 # Detect if this is an agent worklog (contains -agent- suffix)
