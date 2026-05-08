@@ -1,9 +1,8 @@
-# Tricky CC Plugins
+# MV Claude Harness
 
 > A workflow harness for Claude Code: plan-driven development, multi-agent review, and a learning loop that compounds across sessions.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/trickycdm/tricky-cc-plugins)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/Multiverse-io/mv-claude-harness)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-purple.svg)](https://claude.ai)
 
 ## What this is
@@ -15,8 +14,8 @@ The full catalogue of components lives in [`core/README.md`](core/README.md). Th
 ## Install
 
 ```
-/plugin marketplace add trickycdm/tricky-cc-plugins
-/plugin install core@tricky-cc-plugins
+/plugin marketplace add Multiverse-io/mv-claude-harness
+/plugin install core@mv-claude-harness
 ```
 
 To install manually, clone the repo and copy `core/` into your Claude Code plugins directory.
@@ -103,12 +102,11 @@ core/             the plugin — see core/README.md
 plans/            auto-organised plan folders (created by the rename-plan hook)
 ```
 
-## Contributing · Support · License
+## Contributing · Support
 
-- Issues and feature requests: [GitHub Issues](https://github.com/trickycdm/tricky-cc-plugins/issues)
-- Discussions: [GitHub Discussions](https://github.com/trickycdm/tricky-cc-plugins/discussions)
-- MIT licensed — see [LICENSE](LICENSE).
+- Issues and feature requests: [GitHub Issues](https://github.com/Multiverse-io/mv-claude-harness/issues)
+- Discussions: [GitHub Discussions](https://github.com/Multiverse-io/mv-claude-harness/discussions)
 
 ---
 
-Built with care for the Claude Code community by Tricky CDM.
+Built by Multiverse.

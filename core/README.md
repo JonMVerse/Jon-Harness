@@ -1,6 +1,6 @@
 # core — Claude Code workflow plugin
 
-The plugin shipped by [tricky-cc-plugins](../README.md). It provides the agents, commands, skills, and hooks that implement the six-phase development lifecycle described in the root README. Install via the [root README](../README.md#install).
+The plugin shipped by [mv-claude-harness](../README.md). It provides the agents, commands, skills, and hooks that implement the six-phase development lifecycle described in the root README. Install via the [root README](../README.md#install).
 
 ## At a glance
 

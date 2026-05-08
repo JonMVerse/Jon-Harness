@@ -1,4 +1,4 @@
-# Tricky CC Plugins — project context
+# MV Claude Harness — project context
 
 This repo authors a **Claude Code plugin marketplace**. It is not an app — there is no build, no tests, no runtime. Edits under `core/` ship to end users via the `/plugin marketplace` system once published.
 
