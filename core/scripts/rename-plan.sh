@@ -22,6 +22,10 @@ else
   exit 0
 fi
 
+# Ensure PLANS_DIR exists — for plan-mode flow it may not on first use, and the
+# `find` call below would exit 1 under `set -euo pipefail` and abort the script.
+mkdir -p "$PLANS_DIR"
+
 BASENAME=$(basename "$FILE" .md)
 
 # Detect if this is an agent worklog (contains -agent- suffix)
