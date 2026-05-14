@@ -112,14 +112,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 1. Search `docs/` and `documentation/` for any harm, safety, or ethics documents.
 2. Check `lib/atlas/open_ai/errors.ex` for content filter handling.
 3. Check `lib/atlas/open_ai/open_ai.ex` for content filter detection in the run loop.
+4. Check `lib/atlas/projects/projects.ex` — `get_project/2` should filter soft-deleted projects (`is_nil(p.deleted_at)`).
 
 **Current state:**
 - Azure OpenAI content filter detection present — content filter errors are not retried
 - User-type gating limits AI access to authorised users
 - Feature flag control per user
+- Context-Aware Enrichment IDOR concern investigated and resolved: `Project` schema (`lib/atlas/projects/project.ex`) has no user ownership — projects are global curriculum content. Project review data is correctly scoped to `user_id` at `messages.ex:173` and tested at `system_message_params_test.exs:851`
+- Minor: `get_project/2` at `lib/atlas/projects/projects.ex:15` does not filter soft-deleted projects — a learner could receive stale data from a deleted project injected into their system prompt
 - No dedicated harm assessment, red-teaming, or adversarial content testing found
+- Q3 2026 safeguarding guardrail review planned but not yet started
 
-**Report on:** What mitigations exist, what is absent, and what harms are unaddressed (hallucination to learners, inappropriate advice on apprenticeship matters, prompt injection via RAG content).
+**Report on:** What mitigations exist, what is absent, and what harms are unaddressed (hallucination to learners, inappropriate advice on apprenticeship matters, prompt injection via RAG content). Note the soft-deleted project filter as a minor fix required.
 
 ---
 
@@ -234,13 +238,21 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 1. Check `build_pipeline/` for any safety-specific CI steps.
 2. Check `test/` for prompt injection, jailbreak, or output safety tests.
 3. Read `documentation/concerns/SecuritySensitiveSurfaces.md`.
+4. Check `test/atlas/bots/system_messages_test.exs` lines 288–294 for safeguarding instruction snapshots.
 
 **Current state:**
 - Sobelow for general Elixir security scanning in CI
 - Content filter handling in `lib/atlas/open_ai/errors.ex`
-- No AI-specific safety tests: no prompt injection, jailbreak, or output safety benchmarks
+- Safeguarding instructions confirmed present in system prompt and snapshot-tested at `test/atlas/bots/system_messages_test.exs:288–294`:
+  - Sensitive/personal disclosures → direct to Coach
+  - Safeguarding concerns (harm, abuse, neglect) → Coach + Multiverse Safeguarding Policy link + safeguarding@multiverse.io
+  - Misconduct concerns → Coach + Learner Code of Conduct + Disciplinary Process links
+- No adversarial tests validating that safeguarding instructions cannot be bypassed (jailbreak, social engineering)
+- No indirect prompt injection tests via RAG
+- No harm register documenting covered vs uncovered scenarios
+- Safeguarding instructions not sector-specific — NHS and MOD populations have different obligations
 
-**Report on:** What safety testing exists, and what is needed (especially given RAG content that could introduce indirect injection).
+**Report on:** What safety testing exists (note the safeguarding instructions are PARTIAL — present but untested adversarially), and what is needed (especially given RAG content that could introduce indirect injection).
 
 ---
 
@@ -252,13 +264,20 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 1. Read `documentation/concerns/SecuritySensitiveSurfaces.md`.
 2. Check `lib/atlas_web/controllers/langfuse_controller.ex` for prompt deployment security.
 3. Examine the RAG pipeline for indirect injection risk via Intercom content.
+4. Check `lib/atlas/projects/projects.ex` — `get_project/2` should filter `deleted_at IS NULL`.
+5. Check `test/atlas_web/resolvers/bots_test.exs` for any `ask_atlas` integration tests with crafted `project_id`.
 
 **Current state:**
 - Langfuse webhook signature verification protects prompt deployment
 - Sobelow covers general Elixir security
+- Multi-layer authentication; hardcoded company ban list in access control layer
+- Context-Aware Enrichment IDOR concern investigated and resolved: `Project` schema has no user ownership (global curriculum content). Review data correctly scoped to `user_id`. No cross-user data exposure.
+- Minor gap: `get_project/2` at `lib/atlas/projects/projects.ex:15` does not filter soft-deleted projects — one-line fix (`is_nil(p.deleted_at)`) required
+- No integration test for `ask_atlas` mutation with a crafted `project_id` at the GraphQL layer — `bots_test.exs` only covers staff auth on the bot query
 - No LLM-specific security testing: no prompt injection, indirect injection via RAG, model extraction, or data exfiltration tests
+- Langfuse receives full tool call I/O including user search queries — GDPR review required
 
-**Report on:** The specific LLM attack surfaces present in Atlas and whether any are tested.
+**Report on:** The specific LLM attack surfaces present in Atlas and whether any are tested. Note the IDOR concern is resolved; remaining gaps are the soft-delete filter and missing GraphQL-layer test.
 
 ---
 
@@ -309,16 +328,21 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 1. Read `lib/atlas/messages/feedback.ex` — the message feedback schema.
 2. Check `lib/atlas_web/schema/messaging.ex` and resolvers for the feedback GraphQL API.
 3. Check `config/config.exs` for the `chat_message_feedback` RabbitMQ publisher.
-4. Look for any feedback analysis tooling or process documentation.
+4. Check `lib/atlas/messages/messages.ex` lines 130, 566, 594 (message creation) and line 774 (feedback) for idempotency handling.
+5. Check `lib/atlas/bots/system_messages/system_message_params.ex` lines 20–21 for hardcoded AI reviewer UUIDs.
+6. Look for any feedback analysis tooling or process documentation.
 
 **Current state:**
 - `message_feedback` table: `helpful` boolean + optional free-text `content`, linked to user and message
 - Chat action clicks tracked (6 action types) via `ActionTakenOnMessage` mutation
 - Both signals published downstream via RabbitMQ (`chat_message_feedback`, `chat_customer_survey`)
+- `send_message_feedback` is idempotent: `on_conflict: {:replace_all_except, [:id]}, conflict_target: [:user_id, :message_id]` at `messages.ex:774`
+- `send_message` and `ask_atlas` message creation are NOT idempotent: plain `Multi.insert` at `messages.ex:130, 566, 594` — retrying creates duplicate messages
+- AI-generated project reviews identified by two hardcoded UUIDs at `system_message_params.ex:20–21` (`@ai_reviewer_id_production` and `@ai_reviewer_id_staging`) — a UUID reassignment silently breaks AI review detection
 - No documented process for how feedback is reviewed, aggregated, or used to improve prompts/models
 - No feedback loop from Langfuse or Datadog back to prompt authors
 
-**Report on:** What feedback is collected, where it goes, and the gap between collection and improvement.
+**Report on:** What feedback is collected, where it goes, and the gap between collection and improvement. Note that feedback submission is already idempotent; message creation is not.
 
 ---
 
