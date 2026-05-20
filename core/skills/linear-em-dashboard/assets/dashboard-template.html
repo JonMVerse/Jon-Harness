@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linear EM Dashboard</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+
+    /* Header */
+    .header { background: #fff; border-bottom: 1px solid #e5e5ea; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-icon { font-size: 20px; }
+    .header-title { font-size: 16px; font-weight: 700; color: #1d1d1f; }
+    .header-sub { font-size: 11px; color: #86868b; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .last-updated { font-size: 11px; color: #aeaeb2; }
+
+    /* Team picker */
+    .team-picker-wrap { display: flex; align-items: center; gap: 8px; }
+    .team-label { font-size: 12px; font-weight: 600; color: #6e6e73; white-space: nowrap; }
+    #teamSelect {
+      font-size: 13px; font-weight: 600; color: #1d1d1f;
+      background: #f2f2f7; border: 1px solid #e5e5ea; border-radius: 8px;
+      padding: 6px 10px; cursor: pointer; outline: none; min-width: 180px;
+    }
+    #teamSelect:focus { border-color: #5e6ad2; }
+
+    /* Content */
+    .content { padding: 18px 24px; max-width: 1180px; }
+
+    /* Loading */
+    #loadingState { display: flex; align-items: center; justify-content: center; height: 320px; gap: 12px; color: #6e6e73; font-size: 14px; }
+    .spinner { width: 18px; height: 18px; border: 2px solid #e5e5ea; border-top-color: #5e6ad2; border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fff2f2; border: 1px solid #ffc8c8; border-radius: 10px; padding: 14px 18px; color: #c00; font-size: 13px; max-width: 560px; line-height: 1.5; }
+
+    /* KPI row */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+    .kpi-row-triage { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
+    .kpi-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 16px 18px; }
+    .kpi-card-triage { border-left: 3px solid #5e6ad2; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.6px; }
+    .kpi-value { font-size: 30px; font-weight: 700; color: #1d1d1f; margin: 5px 0 3px; line-height: 1; }
+    .kpi-delta { font-size: 12px; }
+    .up { color: #30d158; } .down-good { color: #30d158; } .down-bad { color: #ff453a; } .up-bad { color: #ff453a; } .neutral { color: #aeaeb2; }
+
+    /* Charts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-1 { margin-bottom: 12px; }
+    .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 18px 20px; }
+    .card-title { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+    .card-sub { font-size: 11px; color: #86868b; margin: 3px 0 14px; }
+    .chart-wrap { position: relative; height: 210px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th { text-align: left; padding: 7px 10px; border-bottom: 1.5px solid #e5e5ea; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #86868b; font-weight: 600; white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .b-blue   { background: #eef2ff; color: #5e6ad2; }
+    .b-green  { background: #e9fbe9; color: #1a7f1a; }
+    .b-orange { background: #fff4e5; color: #c05000; }
+    .b-red    { background: #fff1f0; color: #c0241a; }
+    .b-gray   { background: #f2f2f7; color: #6e6e73; }
+    .pill         { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #eef2ff; color: #5e6ad2; }
+    .pill-current { background: #e8fce8; color: #1a7f1a; }
+    .dim { color: #c7c7cc; }
+    .current-row td:first-child::before { content: '● '; color: #30d158; font-size: 9px; }
+
+    /* Label pills */
+    .lbl-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 10px; font-size: 11px; border: 1px solid transparent; white-space: nowrap; margin: 1px 2px 1px 0; }
+    .lbl-pill strong { font-size: 11px; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 20px; color: #86868b; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">📊</div>
+    <div>
+      <div class="header-title">Engineering Metrics</div>
+      <div class="header-sub">Velocity · Lifespan · Carry-over · Triage · Throughput — Linear</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="team-picker-wrap">
+      <span class="team-label">Team</span>
+      <select id="teamSelect" disabled><option>Loading teams…</option></select>
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+  </div>
+</div>
+
+<div class="content">
+  <div id="loadingState"><div class="spinner"></div><span id="loadingMsg">Loading teams…</span></div>
+
+  <div id="dashboard" style="display:none">
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Velocity — current cycle</div><div class="kpi-value" id="kpiVel">—</div><div class="kpi-delta" id="kpiVelD"></div></div>
+      <div class="kpi-card"><div class="kpi-label">Median Ticket Lifespan</div><div class="kpi-value" id="kpiLife">—</div><div class="kpi-delta" id="kpiLifeD"></div></div>
+      <div class="kpi-card"><div class="kpi-label">Carry-over Rate (last cycle)</div><div class="kpi-value" id="kpiCo">—</div><div class="kpi-delta" id="kpiCoD"></div></div>
+      <div class="kpi-card"><div class="kpi-label">Active Contributors</div><div class="kpi-value" id="kpiContrib">—</div><div class="kpi-delta" id="kpiContribD"></div></div>
+    </div>
+    <div class="kpi-row kpi-row-triage">
+      <div class="kpi-card kpi-card-triage"><div class="kpi-label">In Triage</div><div class="kpi-value" id="kpiTriage">—</div><div class="kpi-delta" id="kpiTriageD">tickets currently awaiting triage</div></div>
+      <div class="kpi-card kpi-card-triage"><div class="kpi-label">Completed — 30d rolling</div><div class="kpi-value" id="kpiTriage30d">—</div><div class="kpi-delta" id="kpiTriage30dD">tickets completed in the last 30 days</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Velocity per Cycle</div><div class="card-sub">Completed issues (bars) · Story points (line)</div><div class="chart-wrap"><canvas id="cVelocity"></canvas></div></div>
+      <div class="card"><div class="card-title">Ticket Lifespan Trend</div><div class="card-sub">Median days from first start → completion (completed issues only)</div><div class="chart-wrap"><canvas id="cLifespan"></canvas></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Carry-over Rate</div><div class="card-sub">% of cycle issues not completed by end (excl. cancelled)</div><div class="chart-wrap"><canvas id="cCarryover"></canvas></div></div>
+      <div class="card"><div class="card-title">Scope Growth per Cycle</div><div class="card-sub">Issues at cycle start vs. added mid-cycle</div><div class="chart-wrap"><canvas id="cScope"></canvas></div></div>
+    </div>
+    <div class="grid-1"><div class="card"><div class="card-title">Throughput by Assignee</div><div class="card-sub">Completed issues per person across the last 6 cycles</div><div id="assigneeTableWrap"></div></div></div>
+    <div class="grid-1"><div class="card"><div class="card-title">Cycle Summary</div><div class="card-sub">All metrics at a glance, newest first</div><div id="cycleSummaryWrap"></div></div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script>
+// ─── Config — skill fills this in if a default team is requested ───────────
+const DEFAULT_TEAM_NAME = '';
+const MCP = 'mcp__7bfc320b-e884-4155-a5c2-458f5c37269e';
+const MAX_CYCLES = 8;
+
+// ─── State ────────────────────────────────────────────────────────────────
+let allCharts = [];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+function unwrap(v) {
+  // MCP returns {content:[{type:"text",text:"...JSON..."}]}
+  if (v && typeof v === 'object' && Array.isArray(v.content)) v = v.content;
+  if (Array.isArray(v) && v.length > 0 && v[0] && v[0].type === 'text') v = v[0].text;
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch(_) { return v; } }
+  return v;
+}
+function days(a, b) { return (new Date(b) - new Date(a)) / 86400000; }
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a,b) => a-b);
+  const m = Math.floor(s.length/2);
+  return s.length % 2 ? s[m] : (s[m-1]+s[m])/2;
+}
+function fmt1(n) { return n !== null && n !== undefined ? (+n).toFixed(1) : null; }
+function setMsg(msg) { document.getElementById('loadingMsg').textContent = msg; }
+
+// Deterministic colour per label name (stable across renders)
+const LABEL_PALETTE = ['#5e6ad2','#26b5ce','#4cb782','#f2994a','#eb5757','#f2c94c','#8e44ad','#95a2b3'];
+function labelColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return LABEL_PALETTE[h % LABEL_PALETTE.length];
+}
+function hex2rgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function deltaBadge(cur, prev, lowerIsBetter) {
+  if (cur === null || prev === null || prev === undefined) return '';
+  const diff = cur - prev;
+  if (Math.abs(diff) < 0.05) return '<span class="neutral">→ same</span>';
+  const isGood = lowerIsBetter ? diff < 0 : diff > 0;
+  const cls = isGood ? (diff > 0 ? 'up' : 'down-good') : (diff > 0 ? 'up-bad' : 'down-bad');
+  const arrow = diff > 0 ? '↑' : '↓';
+  const label = Math.abs(diff) < 10 ? Math.abs(diff).toFixed(1) : Math.round(Math.abs(diff));
+  return `<span class="${cls}">${arrow} ${label} vs prev</span>`;
+}
+
+function destroyCharts() {
+  allCharts.forEach(c => c.destroy());
+  allCharts = [];
+}
+
+// ─── Triage data ──────────────────────────────────────────────────────────
+async function loadTriageData(teamName) {
+  try {
+    // Query 1: issues explicitly in the Triage state right now
+    const triageRaw = unwrap(await window.cowork.callMcpTool(
+      MCP + '__list_issues',
+      { team: teamName, state: 'Triage', limit: 250, includeArchived: true }
+    ));
+    const triageIssues = Array.isArray(triageRaw) ? triageRaw : (triageRaw.issues || []);
+    const triageNow = triageIssues.length;
+
+    // Query 2: issues completed in the last 30 days (best available proxy for triage throughput)
+    const cutoffIso = new Date(Date.now() - 30 * 86400000).toISOString();
+    const resolvedRaw = unwrap(await window.cowork.callMcpTool(
+      MCP + '__list_issues',
+      { team: teamName, state: 'completed', updatedAt: cutoffIso, limit: 250, includeArchived: true }
+    ));
+    const resolvedIssues = Array.isArray(resolvedRaw) ? resolvedRaw : (resolvedRaw.issues || []);
+    // Filter client-side to confirmed completedAt within window (state filter gives updates, not just completions)
+    const cutoffMs = Date.now() - 30 * 86400000;
+    const resolved30d = resolvedIssues.filter(i =>
+      i.completedAt && new Date(i.completedAt).getTime() >= cutoffMs
+    ).length;
+
+    return { triageNow, resolved30d };
+  } catch(_) {
+    return { triageNow: null, resolved30d: null };
+  }
+}
+
+// ─── Boot: load teams ──────────────────────────────────────────────────────
+async function init() {
+  try {
+    let raw = unwrap(await window.cowork.callMcpTool(MCP + '__list_teams', { limit: 250 }));
+    const teams = (raw.teams || raw).filter(t => t.name && t.id);
+    teams.sort((a,b) => a.name.localeCompare(b.name));
+
+    const sel = document.getElementById('teamSelect');
+    sel.innerHTML = '<option value="">— pick a team —</option>';
+    teams.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id + '|' + t.name;
+      opt.textContent = (t.icon && !t.icon.startsWith(':') ? '' : '') + t.name;
+      sel.appendChild(opt);
+    });
+
+    // Pre-select if DEFAULT_TEAM_NAME is set
+    if (DEFAULT_TEAM_NAME) {
+      const lower = DEFAULT_TEAM_NAME.toLowerCase();
+      const match = teams.find(t => t.name.toLowerCase() === lower || t.name.toLowerCase().includes(lower));
+      if (match) sel.value = match.id + '|' + match.name;
+    }
+
+    sel.disabled = false;
+    sel.addEventListener('change', onTeamChange);
+
+    // If a team is already selected (pre-set or there's only one), load it
+    if (sel.value) {
+      onTeamChange();
+    } else {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'none';
+      // Show a team-picker prompt
+      document.getElementById('loadingState').innerHTML =
+        '<div style="text-align:center;color:#6e6e73;font-size:14px;">← Select a team above to load the dashboard</div>';
+      document.getElementById('loadingState').style.display = 'flex';
+    }
+  } catch(err) {
+    document.getElementById('loadingState').innerHTML =
+      '<div class="error-box">⚠️ Could not load teams: ' + err.message + '</div>';
+  }
+}
+
+async function onTeamChange() {
+  const sel = document.getElementById('teamSelect');
+  const val = sel.value;
+  if (!val) return;
+  const [teamId, teamName] = val.split('|');
+  await loadDashboard(teamId, teamName);
+}
+
+// ─── Main data load ────────────────────────────────────────────────────────
+async function loadDashboard(teamId, teamName) {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'flex';
+  document.getElementById('loadingState').innerHTML =
+    '<div class="spinner"></div><span id="loadingMsg">Fetching cycles for ' + teamName + '…</span>';
+  destroyCharts();
+
+  try {
+    // 1. Cycles
+    let cyclesRaw = unwrap(await window.cowork.callMcpTool(
+      MCP + '__list_cycles', { teamId }
+    ));
+    let cycles = Array.isArray(cyclesRaw) ? cyclesRaw : (cyclesRaw.cycles || cyclesRaw);
+    if (!Array.isArray(cycles)) throw new Error('Unexpected cycles response: ' + JSON.stringify(cyclesRaw).slice(0,120));
+
+    cycles = cycles
+      .filter(c => Array.isArray(c.issueCountHistory) && c.issueCountHistory.length > 0)
+      .sort((a,b) => a.number - b.number)
+      .slice(-MAX_CYCLES);
+
+    if (!cycles.length) {
+      document.getElementById('loadingState').innerHTML =
+        '<div class="empty">No cycle history found for <strong>' + teamName + '</strong>.<br>This team may not use cycles, or cycles have no data yet.</div>';
+      return;
+    }
+
+    setMsg('Loading issues for ' + cycles.length + ' cycles…');
+
+    // 2. Issues per cycle + triage snapshot (parallel)
+    const [results, triageData] = await Promise.all([
+      Promise.all(cycles.map(async (cycle) => {
+        try {
+          let raw = unwrap(await window.cowork.callMcpTool(
+            MCP + '__list_issues',
+            { team: teamName, cycle: String(cycle.number), limit: 250, includeArchived: true }
+          ));
+          let issues = Array.isArray(raw) ? raw : (raw.issues || []);
+          return { cycle, issues };
+        } catch(_) { return { cycle, issues: [] }; }
+      })),
+      loadTriageData(teamName),
+    ]);
+
+    // 3. Compute metrics
+    const metrics = results.map(({ cycle, issues }) => {
+      const active     = issues.filter(i => i.statusType !== 'canceled' && !i.canceledAt);
+      const done       = active.filter(i => i.statusType === 'completed' || i.completedAt);
+      const incomplete = active.filter(i => i.statusType !== 'completed' && !i.completedAt);
+
+      const velocityCount  = done.length;
+      const velocityPoints = done.reduce((s,i) => s + (i.estimate ? i.estimate.value : 0), 0);
+
+      const lifespans = done
+        .filter(i => i.startedAt && i.completedAt)
+        .map(i => days(i.startedAt, i.completedAt))
+        .filter(d => d >= 0 && d < 90);
+      const medLife = median(lifespans);
+
+      const carryoverRate  = active.length ? incomplete.length / active.length * 100 : 0;
+      const carryoverCount = incomplete.length;
+
+      const hist      = cycle.issueCountHistory;
+      const initScope = hist[0] || 0;
+      const finalScope= hist[hist.length-1] || 0;
+      const scopeAdded= Math.max(0, finalScope - initScope);
+
+      const byAssignee = {};
+      done.forEach(i => {
+        const name = i.assignee || 'Unassigned';
+        byAssignee[name] = (byAssignee[name] || 0) + 1;
+      });
+      const contributors = new Set(done.filter(i=>i.assignee).map(i=>i.assignee)).size;
+
+      const labelCounts = {};
+      done.forEach(i => {
+        (i.labels || []).forEach(lbl => {
+          labelCounts[lbl] = (labelCounts[lbl] || 0) + 1;
+        });
+      });
+
+      return {
+        cycle, label: cycle.title, isCurrent: !!cycle.isCurrent,
+        velocityCount, velocityPoints,
+        medLife,
+        carryoverRate, carryoverCount, totalActive: active.length,
+        initScope, finalScope, scopeAdded,
+        byAssignee, contributors, labelCounts,
+      };
+    });
+
+    render(metrics, teamName, triageData);
+
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('lastUpdated').textContent =
+      teamName + ' · refreshed ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  } catch(err) {
+    document.getElementById('loadingState').innerHTML =
+      '<div class="error-box">⚠️ Failed to load data for <strong>' + teamName + '</strong>: ' + err.message + '</div>';
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function render(metrics, teamName, triageData = {}) {
+  const last = metrics[metrics.length - 1];
+  const prev = metrics.length > 1 ? metrics[metrics.length - 2] : null;
+  const lastDone = [...metrics].reverse().find(m => !m.isCurrent) || last;
+  const prevDone = lastDone ? metrics[metrics.indexOf(lastDone) - 1] : null;
+
+  // KPIs
+  document.getElementById('kpiVel').textContent    = last.velocityCount;
+  document.getElementById('kpiVelD').innerHTML     = deltaBadge(last.velocityCount, prev?.velocityCount, false);
+  document.getElementById('kpiLife').textContent   = last.medLife !== null ? fmt1(last.medLife)+'d' : '—';
+  document.getElementById('kpiLifeD').innerHTML    = deltaBadge(last.medLife, prev?.medLife, true);
+  document.getElementById('kpiCo').textContent     = lastDone.carryoverRate.toFixed(0)+'%';
+  document.getElementById('kpiCoD').innerHTML      = deltaBadge(lastDone.carryoverRate, prevDone?.carryoverRate, true);
+  document.getElementById('kpiContrib').textContent= last.contributors;
+  document.getElementById('kpiContribD').innerHTML  = deltaBadge(last.contributors, prev?.contributors, false);
+
+  // Triage KPIs
+  const { triageNow, resolved30d } = triageData;
+  document.getElementById('kpiTriage').textContent     = triageNow !== null ? triageNow : '—';
+  document.getElementById('kpiTriageD').textContent    = triageNow !== null
+    ? (triageNow === 1 ? 'ticket currently awaiting triage' : 'tickets currently awaiting triage')
+    : 'could not load triage data';
+  document.getElementById('kpiTriage30d').textContent  = resolved30d !== null ? resolved30d : '—';
+  document.getElementById('kpiTriage30dD').textContent = resolved30d !== null
+    ? 'tickets completed in the last 30 days'
+    : 'could not load resolved data';
+
+  const labels = metrics.map(m => m.isCurrent ? m.label+' ●' : m.label);
+  const PRI = '#5e6ad2', SEC = '#26b5ce', WARN = '#ff9500', DANGER = '#ff453a', GRAY = '#8e8e93';
+  const a = (hex, op) => hex + Math.round(op*255).toString(16).padStart(2,'0');
+
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { font:{size:11}, boxWidth:11, padding:10 } } },
+    scales: {
+      x: { grid:{display:false}, ticks:{font:{size:10}, maxRotation:30} },
+      y: { grid:{color:'#f2f2f7'}, ticks:{font:{size:10}}, beginAtZero:true },
+    },
+  };
+
+  // Velocity
+  allCharts.push(new Chart(document.getElementById('cVelocity'), {
+    data: { labels, datasets: [
+      { type:'bar', label:'Issues completed', data:metrics.map(m=>m.velocityCount),
+        backgroundColor:metrics.map(m=>m.isCurrent?a(PRI,0.45):a(PRI,0.85)),
+        borderColor:PRI, borderWidth:1, borderRadius:4, yAxisID:'y' },
+      { type:'line', label:'Story points',
+        data:metrics.map(m=>m.velocityPoints||null),
+        borderColor:SEC, backgroundColor:'transparent',
+        borderWidth:2, pointRadius:4, pointBackgroundColor:'#fff', pointBorderColor:SEC, pointBorderWidth:2,
+        tension:0.35, yAxisID:'y2', spanGaps:true },
+    ]},
+    options: { ...baseOpts,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:11}}},
+      scales:{ x:baseOpts.scales.x, y:{...baseOpts.scales.y,position:'left'},
+        y2:{...baseOpts.scales.y,position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},color:SEC}} }
+    }
+  }));
+
+  // Lifespan
+  allCharts.push(new Chart(document.getElementById('cLifespan'), {
+    type:'line',
+    data:{ labels, datasets:[{ label:'Median lifespan (days)',
+      data:metrics.map(m=>m.medLife!==null?+fmt1(m.medLife):null),
+      borderColor:WARN, backgroundColor:a(WARN,0.1),
+      borderWidth:2.5, pointRadius:5,
+      pointBackgroundColor:metrics.map(m=>m.isCurrent?WARN:'#fff'),
+      pointBorderColor:WARN, pointBorderWidth:2,
+      tension:0.35, fill:true, spanGaps:true }]},
+    options:{ ...baseOpts,
+      plugins:{legend:{display:false}},
+      scales:{ x:baseOpts.scales.x, y:{...baseOpts.scales.y,ticks:{font:{size:10},callback:v=>v+'d'}} }
+    }
+  }));
+
+  // Carry-over
+  allCharts.push(new Chart(document.getElementById('cCarryover'), {
+    type:'line',
+    data:{ labels, datasets:[{ label:'Carry-over %',
+      data:metrics.map(m=>+m.carryoverRate.toFixed(1)),
+      borderColor:DANGER, backgroundColor:a(DANGER,0.07),
+      borderWidth:2.5, pointRadius:5,
+      pointBackgroundColor:metrics.map(m=>m.isCurrent?DANGER:'#fff'),
+      pointBorderColor:DANGER, pointBorderWidth:2,
+      tension:0.35, fill:true }]},
+    options:{ ...baseOpts,
+      plugins:{legend:{display:false}},
+      scales:{ x:baseOpts.scales.x, y:{...baseOpts.scales.y,min:0,max:100,ticks:{font:{size:10},callback:v=>v+'%'}} }
+    }
+  }));
+
+  // Scope growth
+  allCharts.push(new Chart(document.getElementById('cScope'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Planned at start', data:metrics.map(m=>m.initScope),
+        backgroundColor:a(GRAY,0.45), borderColor:GRAY, borderWidth:1, borderRadius:4, stack:'scope' },
+      { label:'Added mid-cycle', data:metrics.map(m=>m.scopeAdded),
+        backgroundColor:metrics.map(m=>a(m.scopeAdded>6?DANGER:WARN,0.7)),
+        borderColor:metrics.map(m=>m.scopeAdded>6?DANGER:WARN),
+        borderWidth:1, borderRadius:4, stack:'scope' },
+    ]},
+    options:{ ...baseOpts,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:11}}},
+      scales:{ x:{...baseOpts.scales.x,stacked:true}, y:{...baseOpts.scales.y,stacked:true} }
+    }
+  }));
+
+  // Assignee table
+  const recentM = metrics.slice(-6);
+  const allA = new Set();
+  recentM.forEach(m => Object.keys(m.byAssignee).filter(a=>a!=='Unassigned').forEach(a=>allA.add(a)));
+  const sortedA = [...allA].sort((a,b) => {
+    const ta = recentM.reduce((s,m)=>s+(m.byAssignee[a]||0),0);
+    const tb = recentM.reduce((s,m)=>s+(m.byAssignee[b]||0),0);
+    return tb-ta;
+  });
+
+  let tHtml = '<table><thead><tr><th>Assignee</th>';
+  recentM.forEach(m => tHtml += `<th>${m.isCurrent?'<span class="pill pill-current">'+m.label+'</span>':m.label}</th>`);
+  tHtml += '<th>Total</th></tr></thead><tbody>';
+  sortedA.forEach(a => {
+    const row = recentM.map(m=>m.byAssignee[a]||0);
+    const total = row.reduce((s,v)=>s+v,0);
+    if (!total) return;
+    tHtml += `<tr><td style="font-weight:500">${a}</td>`;
+    row.forEach(v => {
+      const cls = v>=7?'b-green':v>=4?'b-blue':v>=1?'b-gray':'';
+      tHtml += `<td>${v>0?`<span class="badge ${cls}">${v}</span>`:'<span class="dim">—</span>'}</td>`;
+    });
+    tHtml += `<td><strong>${total}</strong></td></tr>`;
+  });
+  if (!sortedA.length) tHtml += '<tr><td colspan="'+(recentM.length+2)+'" class="empty">No assignee data found</td></tr>';
+  tHtml += '</tbody></table>';
+  document.getElementById('assigneeTableWrap').innerHTML = tHtml;
+
+  // Cycle summary
+  let sHtml = '<table><thead><tr><th>Cycle</th><th>Completed</th><th>Pts</th><th>Ticket Types</th><th>Carry-over</th><th>Med. Lifespan</th><th>Scope Added</th><th>Contributors</th></tr></thead><tbody>';
+  [...metrics].reverse().forEach(m => {
+    const coClass = m.carryoverRate>40?'b-red':m.carryoverRate>20?'b-orange':'b-green';
+
+    // Build label pills sorted by count desc, top 5
+    const sortedLabels = Object.entries(m.labelCounts)
+      .sort((a,b) => b[1]-a[1])
+      .slice(0,5);
+    const unlabelled = m.velocityCount - done_count_with_labels(m);
+    let typeCell;
+    if (sortedLabels.length === 0) {
+      typeCell = '<span class="dim">no labels</span>';
+    } else {
+      typeCell = sortedLabels.map(([lbl, cnt]) => {
+        const col = labelColor(lbl);
+        return `<span class="lbl-pill" style="background:${hex2rgba(col,0.12)};color:${col};border-color:${hex2rgba(col,0.35)}">${lbl} <strong>${cnt}</strong></span>`;
+      }).join(' ');
+    }
+
+    sHtml += `<tr class="${m.isCurrent?'current-row':''}">
+      <td>${m.isCurrent?'<span class="pill pill-current">Current</span> <strong>'+m.label+'</strong>':m.label}</td>
+      <td><strong>${m.velocityCount}</strong></td>
+      <td>${m.velocityPoints>0?m.velocityPoints+'pts':'<span class="dim">—</span>'}</td>
+      <td>${typeCell}</td>
+      <td><span class="badge ${coClass}">${m.carryoverCount}/${m.totalActive} (${m.carryoverRate.toFixed(0)}%)</span></td>
+      <td>${m.medLife!==null?fmt1(m.medLife)+'d':'<span class="dim">—</span>'}</td>
+      <td>${m.scopeAdded>0?'<span class="badge '+(m.scopeAdded>6?'b-red':'b-orange')+'">+'+m.scopeAdded+'</span>':'<span class="dim">0</span>'}</td>
+      <td>${m.contributors}</td>
+    </tr>`;
+  });
+  sHtml += '</tbody></table>';
+
+  function done_count_with_labels(m) {
+    return Object.values(m.labelCounts).reduce((s,v)=>s+v,0);
+  }
+  document.getElementById('cycleSummaryWrap').innerHTML = sHtml;
+}
+
+// Boot
+init();
+</script>
+</body>
+</html>
