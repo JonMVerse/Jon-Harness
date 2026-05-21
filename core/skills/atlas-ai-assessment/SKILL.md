@@ -1,28 +1,34 @@
 ---
 name: atlas-ai-assessment
-description: "AI governance and lifecycle assessment for the Atlas platform. Use when the user says 'atlas assessment', 'assess atlas', 'ai assessment', 'review atlas ai', 'atlas governance', or asks about Atlas AI requirements, capabilities, models, harm, bias, safety, risk, testing, privacy, explainability, feedback, or model cards. Works from the Atlas codebase at ~/Documents/GitHub/atlas."
+description: "AI governance and lifecycle assessment for the Atlas-2 platform. Use when the user says 'atlas assessment', 'assess atlas', 'ai assessment', 'review atlas ai', 'atlas governance', or asks about Atlas AI requirements, capabilities, models, harm, bias, safety, risk, testing, privacy, explainability, feedback, or model cards. Works from the Atlas-2 codebase at Multiverse-io/atlas-2 (GitHub) or locally if cloned."
 user-invocable: true
 ---
 
 # Atlas AI Assessment
 
-Structured assessment of the Atlas AI system across its full lifecycle — development, deployment, and operations. Covers the 16 topic areas below. Claude picks the relevant area(s) based on the user's question, or runs all areas when a full assessment is requested.
+Structured assessment of the Atlas-2 AI system across its full lifecycle — development, deployment, and operations. Covers the 16 topic areas below. Claude picks the relevant area(s) based on the user's question, or runs all areas when a full assessment is requested.
 
 ---
 
 ## Context
 
-**What Atlas is:** A Phoenix/Elixir + React platform that provides AI-powered chat assistance, contextual prompt suggestions, semantic search (RAG), thread summarisation, and project ideation for Multiverse apprentices, candidates, and learners.
+**What Atlas-2 is:** A Next.js 16 + TypeScript rebuild of the Multiverse Atlas platform. Provides AI-powered chat assistance (apprentice ↔ Atlas), semantic knowledge retrieval (RAG over Learning Objectives + Intercom KB with citations), and project ideation for Multiverse apprentices, candidates, and learners. Built with the Vercel AI SDK and Anthropic Claude models.
 
-**Codebase location:** `~/Documents/GitHub/atlas`
+**Codebase:** `Multiverse-io/atlas-2` on GitHub. Read files via `gh api "repos/Multiverse-io/atlas-2/contents/<path>"` or directly if a local clone exists.
 
 **Key AI entry points:**
-- `lib/atlas/bots/` — bot configuration and system prompt management
-- `lib/atlas/copilot/` — learning copilot (page-contextual prompt generation)
-- `lib/atlas/open_ai/` — central LLM integration layer (LangChain, embeddings, summariser, tool calling)
-- `lib/atlas/rag/` — RAG pipeline (chunking, embedding ingestion)
-- `lib/atlas/messages/` — message flow including bot responses and feedback
-- `docs/` and `documentation/` — developer docs and component specs
+- `src/agent/atlas/config.ts` — model selection, temperature, max steps
+- `src/agent/atlas/prompts.ts` — system prompts with semantic versioning
+- `src/agent/atlas/index.ts` — agent entrypoint (`runAtlasAgent`)
+- `src/agent/resilience.ts` — `resilientStreamText` wrapper (fallback + retry)
+- `src/agent/token-tracking.ts` — usage logging
+- `src/tools/definitions/` — SDK-agnostic tool definitions (Zod schemas + execute functions)
+- `src/app/api/chat/route.ts` — chat streaming endpoint (SSE)
+- `src/lib/retrieval.ts` — `fetchKnowledgeSources` (LLM-as-retriever pattern)
+- `src/db/schema.ts` — Drizzle ORM table definitions
+- `docs/epics/PERSONAS.md` — the five user personas
+- `docs/epics/ARCHITECTURE.md` — system shape and request lifecycle
+- `steering/` — coding conventions, tool standards, error handling, security
 
 ---
 
@@ -33,15 +39,17 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Formal or implicit statements of what the AI system must do.
 
 **Process:**
-1. Read `documentation/project_overview.md` and `documentation/architecture.md` for the stated purpose.
-2. Read `docs/features/learning-copilot.md`, `docs/features/llm-functions.md`, `docs/features/alas-chat-actions.md` for feature-level requirements.
-3. Check `adrs/` for any requirements-shaping decisions.
+1. Read `docs/epics/README.md` — the two-bucket epic index (prototype vs post-prototype).
+2. Read `docs/epics/prototype/E07-atlas-ai-conversation/README.md` — chat surface requirements.
+3. Read `docs/epics/prototype/E08a-source-ingestion-embedding-pipeline/README.md` and `E08b-retrieval-rag-tools/README.md` — RAG requirements.
+4. Read `docs/epics/prototype/E11-project-ideation-flow/README.md` — ideation requirements.
+5. Read `CLAUDE.md` and `AGENTS.md` at repo root for the overarching architectural intent.
 
 **Report on:**
-- Is there a standalone AI requirements document? (Currently: No)
-- What are the implicit requirements derivable from the product?
-- What user needs drive the AI features?
-- Gap: absence of explicit, versioned requirements means there is no baseline to test against.
+- Is there a standalone AI requirements document? (Currently: No — requirements are embedded in epic READMEs)
+- What are the implicit requirements derivable from the prototype scope?
+- What user needs drive each AI feature?
+- Gap: no explicit, versioned requirements document means there is no formal baseline to test against.
 
 ---
 
@@ -53,15 +61,13 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 
 | Capability | Primary files |
 |---|---|
-| Atlas Bot (LLM chat) | `lib/atlas/bots/`, `lib/atlas/messages/messages.ex` |
-| Learning Copilot | `lib/atlas/copilot/page_prompt_generator.ex` |
-| RAG (semantic search) | `lib/atlas/rag/`, `lib/atlas/open_ai/functions/` |
-| Thread Summariser | `lib/atlas/channels/thread_summariser_worker.ex` |
-| Tool Calling | `lib/atlas/open_ai/functions/` (intercom_search, ksb_search, learning_objectives_search) |
-| Project Ideas | `lib/atlas/project_ideas/project_ideas_generator.ex` |
-| AI Message Summaries | `client/src/components/messaging/MessageSummaryBottomSheet.tsx` |
+| Conversational Chat | `src/agent/atlas/index.ts`, `src/app/api/chat/route.ts` |
+| Knowledge Retrieval (RAG) | `src/tools/definitions/search-knowledge.ts`, `src/lib/retrieval.ts` |
+| Programme Look-up | `src/tools/definitions/look-up-programme.ts` |
+| Project Ideation | `src/tools/definitions/generate-project-ideas.ts` |
+| Inline Citation Rendering | `src/agent/atlas/prompts.ts` (citation rules), client SSE parsing |
 
-**Report on:** What each capability does, its trigger, and its user-facing purpose.
+**Report on:** What each capability does, its trigger, and its user-facing purpose. Note that E09 (page-context / Copilot + Spotlight) and E22 (prompt registry) are prototype scope but not yet implemented.
 
 ---
 
@@ -70,16 +76,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Which LLMs and embedding models are in use, via which access routes.
 
 **Process:**
-1. Read `lib/atlas/open_ai/open_ai.ex` — look for model name constants and ChatOpenAI struct construction.
-2. Read `config/runtime.exs` lines 177-188 — endpoint and key configuration.
-3. Read `documentation/specs/EXT_OpenAi.md` for the summary.
+1. Read `src/agent/atlas/config.ts` — model name constants, temperature, maxSteps.
+2. Read `src/agent/resilience.ts` — fallback model and retry logic.
+3. Read `package.json` — AI SDK versions (`ai`, `@ai-sdk/anthropic`).
+4. Check `.env.example` or `src/lib/langfuse.ts` for any environment variable hints.
 
 **Current models (verify):**
-- Chat: GPT-4o, GPT-4.1, GPT-5, GPT-5.2 variants via AI Service Proxy (Pantheon/LiteLLM)
-- Embeddings: `text-embedding-3-small` via Azure OpenAI
-- Model selection gated by ConfigCat feature flags (e.g. `use_gpt_5_mini?`)
+- Primary chat: Claude Sonnet 4.6 (`claude-sonnet-4-6`) via Vercel AI SDK + Anthropic
+- Fallback chat: Claude Haiku 4.5 (`claude-haiku-4-5-20251001`)
+- Embeddings: not yet implemented in prototype (E08a deferred to production; demo uses in-memory LLM-as-retriever)
+- Temperature: 0.4; maxSteps: 4
 
-**Report on:** Model versions, routing, selection logic, and any version-lock risks.
+**Report on:** Model versions, fallback routing, whether model selection is configurable, and any version-lock risks. Note that the embedding pipeline (E08a) is deferred — no embedding model is currently wired.
 
 ---
 
@@ -88,19 +96,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Who interacts with or is affected by the AI features.
 
 **Process:**
-1. Read `adrs/0001-unified-user-authorisation-for-atlas.md` for user type definitions.
-2. Read `lib/atlas/bots/system_messages/system_message_params.ex` for per-user-type prompt logic.
-3. Check `lib/atlas/feature_flags.ex` for population-specific feature gating.
+1. Read `docs/epics/PERSONAS.md` — the five personas, their JTBD, and surface scope.
+2. Read `src/agent/atlas/prompts.ts` — does the system prompt differentiate by user type?
+3. Check `src/db/schema.ts` — does the `users` table have a role column?
 
 **Current populations (verify):**
-- Apprentices (levy) — primary; receive personalised bot responses
-- Candidates (programme applicants) — candidate-specific system prompt
-- SaaS learners — deprecated pathway, still code-present
-- Coaches/guides — receive AI-generated conversation summaries
-- Employers — indirect (apprenticeship data feeds prompt context)
-- Staff — access with levy prompt, admin route access
+- Apprentices — primary; receive AI chat, RAG, and ideation responses
+- Candidates (programme applicants) — out of scope for prototype; E04 covers fixture variants
+- Coaches / Guides — read-only oversight (no AI-generated content directed at them in prototype)
+- Instructors — content authors; verify Learning Objectives feed RAG
+- Managers — Multiverse staff; feature flag admin in E06
 
-**Report on:** Whether a formal affected-population impact analysis exists (currently: No). Differential treatment across user types.
+**Report on:** Whether a formal affected-population impact analysis exists (currently: No). Whether the system prompt differentiates treatment across user types. Whether E04 fixture variants for apprenticeship lifecycle states are implemented.
 
 ---
 
@@ -109,21 +116,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Documentation or tooling that identifies and mitigates potential harms.
 
 **Process:**
-1. Search `docs/` and `documentation/` for any harm, safety, or ethics documents.
-2. Check `lib/atlas/open_ai/errors.ex` for content filter handling.
-3. Check `lib/atlas/open_ai/open_ai.ex` for content filter detection in the run loop.
-4. Check `lib/atlas/projects/projects.ex` — `get_project/2` should filter soft-deleted projects (`is_nil(p.deleted_at)`).
+1. Read `src/agent/atlas/prompts.ts` — look for safeguarding, harm, or safety instructions in the system prompt.
+2. Search `docs/` and `steering/` for any harm, safety, or ethics documents.
+3. Read `steering/SECURITY_STANDARDS.md` for relevant protections.
+4. Check `src/agent/resilience.ts` for error handling on safety-blocked responses.
 
 **Current state:**
-- Azure OpenAI content filter detection present — content filter errors are not retried
-- User-type gating limits AI access to authorised users
-- Feature flag control per user
-- Context-Aware Enrichment IDOR concern investigated and resolved: `Project` schema (`lib/atlas/projects/project.ex`) has no user ownership — projects are global curriculum content. Project review data is correctly scoped to `user_id` at `messages.ex:173` and tested at `system_message_params_test.exs:851`
-- Minor: `get_project/2` at `lib/atlas/projects/projects.ex:15` does not filter soft-deleted projects — a learner could receive stale data from a deleted project injected into their system prompt
+- System prompt (v1.1.0) includes tool guidance and citation rules — verify whether it includes safeguarding instructions (coach referral, safeguarding contacts)
 - No dedicated harm assessment, red-teaming, or adversarial content testing found
-- Q3 2026 safeguarding guardrail review planned but not yet started
+- No harm register documenting covered vs. uncovered scenarios
+- Prototype uses fixture users — no real apprentice data at risk yet
 
-**Report on:** What mitigations exist, what is absent, and what harms are unaddressed (hallucination to learners, inappropriate advice on apprenticeship matters, prompt injection via RAG content). Note the soft-deleted project filter as a minor fix required.
+**Report on:** What safety instructions are in the prompt, what mitigations exist at the infrastructure level, and what is absent. Note that prototype scale limits immediate risk but safeguarding instructions should be established before any real users interact.
 
 ---
 
@@ -132,16 +136,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** How the data feeding the AI is validated, refreshed, and monitored.
 
 **Process:**
-1. Read `lib/atlas/intercom/source_embedding_worker.ex` — Intercom sync and embedding refresh.
-2. Read `lib/atlas/learning_objectives/learning_objective_embedding_worker.ex` — LO embedding with hash-based change detection.
-3. Check `config/runtime.exs` for cron schedules.
+1. Read `src/db/seed.ts` — fixture content seeded into the knowledge corpus.
+2. Read `src/db/schema.ts` — `sources` table structure.
+3. Read `src/lib/retrieval.ts` — how knowledge sources are fetched and ranked.
+4. Check `docs/epics/prototype/E08a-source-ingestion-embedding-pipeline/README.md` — what the production pipeline will look like.
 
 **Current state:**
-- Intercom knowledge base synced hourly 9am–5pm weekdays
-- Embeddings use SHA-256 content hash to skip unchanged content
+- Demo: 5 Learning Objectives seeded as fixture content in `db/seed.ts`
+- Production embedding pipeline (pgvector, one-shot embed script, Anthropic embeddings) is E08a — not yet implemented
 - No data quality SLAs, drift monitoring, or retrieval accuracy metrics
+- LLM-as-retriever pattern in `retrieval.ts` is a demo approximation, not production-grade semantic search
 
-**Report on:** Freshness, validation, and monitoring gaps for each data source feeding the AI.
+**Report on:** Freshness, validation, and monitoring gaps for each data source. Distinguish demo state from the intended production architecture described in E08a.
 
 ---
 
@@ -150,15 +156,16 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Documented risks at design, development, testing, deployment, operation, and retirement stages.
 
 **Process:**
-1. Read `documentation/project_overview.md` — "Risks, Constraints, and Assumptions" section.
-2. Read `adrs/` for risk-motivated decisions.
-3. Check `documentation/verification_report.md` for unresolved gaps.
+1. Read `docs/TECH_DECISIONS.md` — ADR log for risk-motivated decisions.
+2. Read `docs/epics/prototype/E01-system-architecture-conventions/README.md` — architectural risk signals.
+3. Check `steering/` for any risk governance documents.
 
 **Current state:**
-- Risks noted in project overview: embedding vendor lock, AI service coupling, no lifecycle-stage framework
-- ADRs 0001-0004 address specific technical decisions, not AI risk governance
+- No formal AI risk register or lifecycle-stage risk framework
+- ADRs (if any) address technical decisions, not AI risk governance
+- Prototype stage: risks are primarily about demonstrating multi-agent viability before production commitment
 
-**Report on:** Which risks are identified, which lifecycle stages lack coverage, and whether there is a risk register or review process.
+**Report on:** Which risks are identified (vendor lock-in, model version drift, RAG content quality, safeguarding), which lifecycle stages lack coverage, and whether there is a risk review process.
 
 ---
 
@@ -167,16 +174,20 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** A plan for how AI outputs are tested and validated.
 
 **Process:**
-1. Read `documentation/concerns/Testing_UnitTesting.md`, `Testing_IntegrationTesting.md`, `Testing_EndToEndTesting.md`.
-2. Look in `test/atlas/open_ai/` for AI-specific tests.
-3. Check `build_pipeline/` for CI steps.
+1. Read `steering/TESTING_AND_VERIFICATION.md` — test standards and requirements.
+2. Read `src/agent/atlas/__tests__/` — agent-level tests.
+3. Read `src/tools/definitions/__tests__/` — tool unit tests.
+4. Check `playwright.config.ts` and `e2e/` for end-to-end AI tests.
+5. Check `package.json` for CI scripts.
 
 **Current state:**
-- ExUnit for backend, Vitest + Playwright for frontend, Percy for visual regression
-- LLM function tests in `test/atlas/open_ai/functions/` using Mimic to mock OpenAI
-- No AI-specific TEVV plan, no prompt regression suite, no golden-set evaluation
+- Vitest 3 for unit/integration tests; Playwright for e2e with mocked Anthropic responses
+- Agent tests mock `resilientStreamText` and `trackTokenUsage` — validate code paths, not model output quality
+- Tool unit tests validate Zod schemas and execute functions with mocked data
+- No prompt regression suite, no golden-set evaluation, no output quality benchmarks
+- E08b S04 (eval harness) is in prototype scope but not yet implemented
 
-**Report on:** What testing exists for AI components vs. what is absent. Highlight the lack of output quality benchmarks and prompt regression testing.
+**Report on:** What testing exists for AI components vs. what is absent. Highlight the lack of output quality benchmarks and the distinction between code-level testing (present) and model-level evaluation (absent).
 
 ---
 
@@ -185,13 +196,13 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Evidence that the system has been tested for differential performance across demographic groups or user types.
 
 **Process:**
-1. Search `test/` for any bias, fairness, or demographic evaluation.
-2. Check `docs/` and `documentation/` for any bias or equity documentation.
-3. Check if prompts differentiate by user type in ways that could disadvantage groups.
+1. Search `test/` and `src/` for any bias, fairness, or demographic evaluation.
+2. Check `docs/` and `steering/` for any bias or equity documentation.
+3. Read `src/agent/atlas/prompts.ts` — does the prompt introduce demographic differentials?
 
-**Current state:** No evidence of bias testing found anywhere in the codebase or documentation.
+**Current state:** No evidence of bias testing found anywhere in the codebase or documentation. Prototype scope does not include real user data.
 
-**Report on:** Absence of bias testing, and which axes are most at risk (user type, programme type, employer size, geographic region).
+**Report on:** Absence of bias testing, and which axes are most at risk (user type, programme type, employer sector, geographic region, apprenticeship lifecycle stage).
 
 ---
 
@@ -200,16 +211,18 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** How AI output quality and system performance are measured.
 
 **Process:**
-1. Read `documentation/concerns/Observability_Metrics.md` and `Observability_Tracing.md`.
-2. Read `documentation/specs/EXT_OpenAi.md` observability section.
-3. Read `docs/observability.md`.
+1. Read `src/agent/token-tracking.ts` — what is captured per generation.
+2. Read `src/lib/langfuse.ts` — Langfuse integration status.
+3. Read `src/lib/logger.ts` — Pino logging configuration.
+4. Check `steering/OBSERVABILITY.md` if it exists.
 
 **Current state:**
-- Token usage (input/output) tracked via OpenTelemetry → Langfuse and Datadog
-- Prompt name/version linked to each generation via OTel attributes
-- No AI-specific performance benchmarks: accuracy, relevance, hallucination rate, embedding retrieval quality
+- Token usage (feature, model, promptVersion, inputTokens, outputTokens, sessionId) logged via Pino on every agent completion
+- Langfuse stub exists — OTel wiring is E06 work, not yet implemented
+- No AI-specific performance benchmarks: accuracy, relevance, hallucination rate, retrieval quality
+- Token tracking is fire-and-forget (non-blocking), which means failures are silently dropped
 
-**Report on:** What is measured vs. what is needed for responsible AI operation.
+**Report on:** What is measured vs. what is needed for responsible AI operation. Note the Langfuse stub state.
 
 ---
 
@@ -218,15 +231,17 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Testing that validates model behaviour, not just code behaviour.
 
 **Process:**
-1. Read `test/atlas/open_ai/` directory.
-2. Check for any eval frameworks or golden-set test fixtures.
+1. Read `src/agent/atlas/__tests__/index.test.ts` — what the agent tests actually assert.
+2. Check `src/tools/definitions/__tests__/` — what tool tests cover.
+3. Look for any eval harness or golden-set test fixtures.
 
 **Current state:**
-- Tool calling functions have unit tests using Mimic (mocked OpenAI responses)
+- Tool unit tests use mocked execute functions — validate Zod schema contracts, not retrieval quality
+- Agent tests mock `resilientStreamText` — validate the call chain, not the model's responses
 - No prompt regression suite, no golden-set evaluation, no output quality benchmarks
-- Tests validate code paths, not model output quality
+- Tests validate that code calls the right things, not that the AI produces good answers
 
-**Report on:** The gap between code-level testing and model-level evaluation.
+**Report on:** The gap between code-level testing (current state) and model-level evaluation (target state for production). Reference E08b S04 (eval harness) as the planned solution.
 
 ---
 
@@ -235,24 +250,17 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Tests for harmful, unsafe, or unintended model outputs.
 
 **Process:**
-1. Check `build_pipeline/` for any safety-specific CI steps.
-2. Check `test/` for prompt injection, jailbreak, or output safety tests.
-3. Read `documentation/concerns/SecuritySensitiveSurfaces.md`.
-4. Check `test/atlas/bots/system_messages_test.exs` lines 288–294 for safeguarding instruction snapshots.
+1. Read `src/agent/atlas/prompts.ts` — system prompt safety instructions.
+2. Check `e2e/` for any safety or guardrail tests.
+3. Read `steering/SECURITY_STANDARDS.md` for relevant protections.
 
 **Current state:**
-- Sobelow for general Elixir security scanning in CI
-- Content filter handling in `lib/atlas/open_ai/errors.ex`
-- Safeguarding instructions confirmed present in system prompt and snapshot-tested at `test/atlas/bots/system_messages_test.exs:288–294`:
-  - Sensitive/personal disclosures → direct to Coach
-  - Safeguarding concerns (harm, abuse, neglect) → Coach + Multiverse Safeguarding Policy link + safeguarding@multiverse.io
-  - Misconduct concerns → Coach + Learner Code of Conduct + Disciplinary Process links
-- No adversarial tests validating that safeguarding instructions cannot be bypassed (jailbreak, social engineering)
-- No indirect prompt injection tests via RAG
-- No harm register documenting covered vs uncovered scenarios
-- Safeguarding instructions not sector-specific — NHS and MOD populations have different obligations
+- System prompt sets tone and tool guidance; verify whether safeguarding instructions are present
+- Playwright e2e tests mock the Anthropic API — cannot test real model safety behaviours
+- No adversarial tests: no jailbreak attempts, no indirect prompt injection via RAG, no social engineering scenarios
+- No harm register documenting covered vs. uncovered safety scenarios
 
-**Report on:** What safety testing exists (note the safeguarding instructions are PARTIAL — present but untested adversarially), and what is needed (especially given RAG content that could introduce indirect injection).
+**Report on:** What safety instructions are in the prompt, whether any safety behaviour is tested (even via mocks), and what adversarial testing is absent.
 
 ---
 
@@ -261,23 +269,21 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Security testing specific to LLM attack surfaces.
 
 **Process:**
-1. Read `documentation/concerns/SecuritySensitiveSurfaces.md`.
-2. Check `lib/atlas_web/controllers/langfuse_controller.ex` for prompt deployment security.
-3. Examine the RAG pipeline for indirect injection risk via Intercom content.
-4. Check `lib/atlas/projects/projects.ex` — `get_project/2` should filter `deleted_at IS NULL`.
-5. Check `test/atlas_web/resolvers/bots_test.exs` for any `ask_atlas` integration tests with crafted `project_id`.
+1. Read `steering/SECURITY_STANDARDS.md`.
+2. Read `src/app/api/chat/route.ts` — input validation and auth on the chat endpoint.
+3. Read `src/lib/api-handler.ts` — `withApiHandler` wrapper protections.
+4. Read `src/lib/retrieval.ts` — indirect prompt injection risk via RAG content.
+5. Check `src/agent/token-tracking.ts` — what data is logged (GDPR / data minimisation).
 
 **Current state:**
-- Langfuse webhook signature verification protects prompt deployment
-- Sobelow covers general Elixir security
-- Multi-layer authentication; hardcoded company ban list in access control layer
-- Context-Aware Enrichment IDOR concern investigated and resolved: `Project` schema has no user ownership (global curriculum content). Review data correctly scoped to `user_id`. No cross-user data exposure.
-- Minor gap: `get_project/2` at `lib/atlas/projects/projects.ex:15` does not filter soft-deleted projects — one-line fix (`is_nil(p.deleted_at)`) required
-- No integration test for `ask_atlas` mutation with a crafted `project_id` at the GraphQL layer — `bots_test.exs` only covers staff auth on the bot query
-- No LLM-specific security testing: no prompt injection, indirect injection via RAG, model extraction, or data exfiltration tests
-- Langfuse receives full tool call I/O including user search queries — GDPR review required
+- Zod input validation on `ChatRequestSchema` at the API boundary
+- `withApiHandler` wrapper adds request ID and structured error handling
+- SSE streaming — no evidence of specific SSE injection hardening
+- Indirect prompt injection via RAG: fixture content is trusted, but production Intercom content is external — no injection guards
+- Token tracking logs feature + session IDs (verify no PII in logged fields)
+- No LLM-specific security tests: no prompt injection, model extraction, or data exfiltration tests
 
-**Report on:** The specific LLM attack surfaces present in Atlas and whether any are tested. Note the IDOR concern is resolved; remaining gaps are the soft-delete filter and missing GraphQL-layer test.
+**Report on:** The specific LLM attack surfaces present in atlas-2, what is validated at the API boundary, and what security testing is absent.
 
 ---
 
@@ -286,18 +292,19 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Privacy Impact Assessments, data anonymisation, or differential privacy for AI processing.
 
 **Process:**
-1. Read `docs/testing-with-production-data.md` for anonymisation tooling.
-2. Check `scripts/copy_anonymised_db` for the anonymisation strategy.
-3. Search `docs/` and `documentation/` for any PIA or privacy documentation.
+1. Read `src/db/schema.ts` — what personal data fields exist in the schema.
+2. Read `src/agent/atlas/prompts.ts` — does the system prompt inject personal data?
+3. Read `src/agent/token-tracking.ts` — is any PII logged?
+4. Search `docs/` for any PIA or privacy documentation.
 
 **Current state:**
-- `scripts/copy_anonymised_db` anonymises emails, names, etc. before developer access to production data
-- Anonymiser strategy validated in CI
+- Prototype uses fixture users — no real PII at risk yet
+- `users` table has email, name, role fields — verify what is injected into prompts
 - No PIA documentation for AI features
 - No differential privacy implementation
-- Personal data (name, employer, job title, ULN, programme) is injected directly into system prompts
+- Langfuse stub: when real OTel wiring lands (E06), verify that tool call I/O logged to Langfuse does not include user PII
 
-**Report on:** What privacy protections exist, and what is absent — particularly for personal data in prompts.
+**Report on:** What personal data the AI system will handle in production, what privacy protections exist or are planned, and what is absent.
 
 ---
 
@@ -306,17 +313,19 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** A registry of models in use, model cards describing their properties, and mechanisms for explaining AI decisions to users.
 
 **Process:**
-1. Check `adrs/` for any model governance decisions.
-2. Read `docs/system-prompts.md` for the prompt versioning system.
-3. Check the frontend for any AI disclosure or explainability features.
+1. Read `src/agent/atlas/prompts.ts` — prompt versioning approach.
+2. Read `docs/TECH_DECISIONS.md` — any model governance ADRs.
+3. Read `docs/epics/prototype/E22-prompt-registry-versioning/README.md` — the planned prompt registry.
+4. Check the frontend for any AI disclosure or explainability features.
 
 **Current state:**
 - No model registry or model cards
-- System prompts versioned in Langfuse (closest thing to a prompt registry) — name + version linked to traces
-- 4 ADRs: authorisation, prompt placeholders, automatic prompt deployment, agentic language — no AI ethics or model governance ADRs
-- No learner-facing explainability: learners cannot see which model responded, what prompt was used, or why a particular answer was generated
+- Prompts versioned inline in `prompts.ts` (v1.1.0 for chat, v1.0.0 for ideation) — semantic versioning present but no formal registry
+- E22 (code-first prompt registry, `getPrompt(name, version?)`) is in prototype scope but not yet implemented
+- No learner-facing explainability: users cannot see which model responded or what prompt was used
+- Token tracking links `promptVersion` to usage logs — closest thing to a prompt audit trail
 
-**Report on:** What exists vs. what responsible AI practice requires at each maturity level.
+**Report on:** What exists vs. what responsible AI practice requires. Note E22 as the planned solution and its current implementation status.
 
 ---
 
@@ -325,24 +334,19 @@ Structured assessment of the Atlas AI system across its full lifecycle — devel
 **What to look for:** Mechanisms for users to provide feedback on AI outputs, and evidence that this feedback improves the system.
 
 **Process:**
-1. Read `lib/atlas/messages/feedback.ex` — the message feedback schema.
-2. Check `lib/atlas_web/schema/messaging.ex` and resolvers for the feedback GraphQL API.
-3. Check `config/config.exs` for the `chat_message_feedback` RabbitMQ publisher.
-4. Check `lib/atlas/messages/messages.ex` lines 130, 566, 594 (message creation) and line 774 (feedback) for idempotency handling.
-5. Check `lib/atlas/bots/system_messages/system_message_params.ex` lines 20–21 for hardcoded AI reviewer UUIDs.
-6. Look for any feedback analysis tooling or process documentation.
+1. Read `src/db/schema.ts` — is there a `message_feedback` table or similar?
+2. Check `src/app/api/` for any feedback endpoints.
+3. Check the client for any thumbs-up/down or feedback UI.
+4. Check `src/agent/token-tracking.ts` — are action events tracked?
 
 **Current state:**
-- `message_feedback` table: `helpful` boolean + optional free-text `content`, linked to user and message
-- Chat action clicks tracked (6 action types) via `ActionTakenOnMessage` mutation
-- Both signals published downstream via RabbitMQ (`chat_message_feedback`, `chat_customer_survey`)
-- `send_message_feedback` is idempotent: `on_conflict: {:replace_all_except, [:id]}, conflict_target: [:user_id, :message_id]` at `messages.ex:774`
-- `send_message` and `ask_atlas` message creation are NOT idempotent: plain `Multi.insert` at `messages.ex:130, 566, 594` — retrying creates duplicate messages
-- AI-generated project reviews identified by two hardcoded UUIDs at `system_message_params.ex:20–21` (`@ai_reviewer_id_production` and `@ai_reviewer_id_staging`) — a UUID reassignment silently breaks AI review detection
-- No documented process for how feedback is reviewed, aggregated, or used to improve prompts/models
-- No feedback loop from Langfuse or Datadog back to prompt authors
+- No feedback mechanism implemented in the prototype
+- No `message_feedback` table in the current schema
+- No thumbs-up/down or free-text feedback UI
+- Token usage is tracked but no quality signal is captured alongside it
+- No documented process for how future feedback would be reviewed or used to improve prompts
 
-**Report on:** What feedback is collected, where it goes, and the gap between collection and improvement. Note that feedback submission is already idempotent; message creation is not.
+**Report on:** Absence of feedback collection in the prototype, what would need to be built, and how it connects to the prompt registry work in E22.
 
 ---
 
@@ -387,3 +391,4 @@ When the user asks for a complete assessment (e.g. "run the full atlas ai assess
 - Reference specific files and line numbers for every finding.
 - If the user asks a question that doesn't fit a named area, apply the same approach: read first, then report with evidence.
 - The assessment covers the codebase only. It cannot tell you what exists in external systems (Langfuse config, Datadog dashboards, Confluence docs) unless the user provides access or pastes content.
+- Distinguish prototype state (current) from production intent (future epics) — many gaps are known and planned for; call out which are gaps vs. deferred scope.
