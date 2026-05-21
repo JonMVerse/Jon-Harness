@@ -76,6 +76,14 @@
     .lbl-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 10px; font-size: 11px; border: 1px solid transparent; white-space: nowrap; margin: 1px 2px 1px 0; }
     .lbl-pill strong { font-size: 11px; }
 
+    /* Linked KPI cards */
+    .kpi-card-link { cursor: pointer; transition: box-shadow 0.15s, transform 0.12s; }
+    .kpi-card-link:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
+
+    /* Cycle links in table */
+    .cycle-link { color: inherit; text-decoration: none; border-bottom: 1px dashed #c7c7cc; }
+    .cycle-link:hover { color: #5e6ad2; border-bottom-color: #5e6ad2; }
+
     /* Empty state */
     .empty { text-align: center; padding: 40px 20px; color: #86868b; font-size: 13px; }
   </style>
@@ -110,8 +118,8 @@
       <div class="kpi-card"><div class="kpi-label">Active Contributors</div><div class="kpi-value" id="kpiContrib">—</div><div class="kpi-delta" id="kpiContribD"></div></div>
     </div>
     <div class="kpi-row kpi-row-triage">
-      <div class="kpi-card kpi-card-triage"><div class="kpi-label">In Triage</div><div class="kpi-value" id="kpiTriage">—</div><div class="kpi-delta" id="kpiTriageD">tickets currently awaiting triage</div></div>
-      <div class="kpi-card kpi-card-triage"><div class="kpi-label">Completed — 30d rolling</div><div class="kpi-value" id="kpiTriage30d">—</div><div class="kpi-delta" id="kpiTriage30dD">tickets completed in the last 30 days</div></div>
+      <div class="kpi-card kpi-card-triage" id="kpiTriageCard"><div class="kpi-label">In Triage</div><div class="kpi-value" id="kpiTriage">—</div><div class="kpi-delta" id="kpiTriageD">tickets currently awaiting triage</div></div>
+      <div class="kpi-card kpi-card-triage" id="kpiTriage30dCard"><div class="kpi-label">Completed — 30d rolling</div><div class="kpi-value" id="kpiTriage30d">—</div><div class="kpi-delta" id="kpiTriage30dD">tickets completed in the last 30 days</div></div>
     </div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Velocity per Cycle</div><div class="card-sub">Completed issues (bars) · Story points (line)</div><div class="chart-wrap"><canvas id="cVelocity"></canvas></div></div>
@@ -223,7 +231,7 @@ async function init() {
     sel.innerHTML = '<option value="">— pick a team —</option>';
     teams.forEach(t => {
       const opt = document.createElement('option');
-      opt.value = t.id + '|' + t.name;
+      opt.value = t.id + '|' + t.name + '|' + (t.key || '');
       opt.textContent = (t.icon && !t.icon.startsWith(':') ? '' : '') + t.name;
       sel.appendChild(opt);
     });
@@ -232,7 +240,7 @@ async function init() {
     if (DEFAULT_TEAM_NAME) {
       const lower = DEFAULT_TEAM_NAME.toLowerCase();
       const match = teams.find(t => t.name.toLowerCase() === lower || t.name.toLowerCase().includes(lower));
-      if (match) sel.value = match.id + '|' + match.name;
+      if (match) sel.value = match.id + '|' + match.name + '|' + (match.key || '');
     }
 
     sel.disabled = false;
@@ -259,12 +267,12 @@ async function onTeamChange() {
   const sel = document.getElementById('teamSelect');
   const val = sel.value;
   if (!val) return;
-  const [teamId, teamName] = val.split('|');
-  await loadDashboard(teamId, teamName);
+  const [teamId, teamName, teamKey] = val.split('|');
+  await loadDashboard(teamId, teamName, teamKey || '');
 }
 
 // ─── Main data load ────────────────────────────────────────────────────────
-async function loadDashboard(teamId, teamName) {
+async function loadDashboard(teamId, teamName, teamKey = '') {
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('loadingState').style.display = 'flex';
   document.getElementById('loadingState').innerHTML =
@@ -307,7 +315,17 @@ async function loadDashboard(teamId, teamName) {
       loadTriageData(teamName),
     ]);
 
-    // 3. Compute metrics
+    // 3. Extract org slug from a sample issue URL (e.g. https://linear.app/acme/issue/TEAM-1)
+    let orgSlug = '';
+    for (const { issues } of results) {
+      const sample = issues.find(i => i.url && i.url.includes('linear.app'));
+      if (sample) {
+        const m = sample.url.match(/linear\.app\/([^/]+)\//);
+        if (m) { orgSlug = m[1]; break; }
+      }
+    }
+
+    // 4. Compute metrics
     const metrics = results.map(({ cycle, issues }) => {
       const active     = issues.filter(i => i.statusType !== 'canceled' && !i.canceledAt);
       const done       = active.filter(i => i.statusType === 'completed' || i.completedAt);
@@ -354,7 +372,7 @@ async function loadDashboard(teamId, teamName) {
       };
     });
 
-    render(metrics, teamName, triageData);
+    render(metrics, teamName, triageData, { orgSlug, teamKey });
 
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
@@ -368,7 +386,7 @@ async function loadDashboard(teamId, teamName) {
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────
-function render(metrics, teamName, triageData = {}) {
+function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = '' } = {}) {
   const last = metrics[metrics.length - 1];
   const prev = metrics.length > 1 ? metrics[metrics.length - 2] : null;
   const lastDone = [...metrics].reverse().find(m => !m.isCurrent) || last;
@@ -394,6 +412,20 @@ function render(metrics, teamName, triageData = {}) {
   document.getElementById('kpiTriage30dD').textContent = resolved30d !== null
     ? 'tickets completed in the last 30 days'
     : 'could not load resolved data';
+
+  // Link triage KPI cards to Linear views (if we could resolve the org slug)
+  if (orgSlug && teamKey) {
+    const base = `https://linear.app/${orgSlug}/team/${teamKey}`;
+    const triageCard = document.getElementById('kpiTriageCard');
+    triageCard.classList.add('kpi-card-link');
+    triageCard.title = 'Open triage in Linear';
+    triageCard.onclick = () => window.open(`${base}/triage`, '_blank');
+
+    const doneCard = document.getElementById('kpiTriage30dCard');
+    doneCard.classList.add('kpi-card-link');
+    doneCard.title = 'Open issues in Linear';
+    doneCard.onclick = () => window.open(`${base}/issues`, '_blank');
+  }
 
   const labels = metrics.map(m => m.isCurrent ? m.label+' ●' : m.label);
   const PRI = '#5e6ad2', SEC = '#26b5ce', WARN = '#ff9500', DANGER = '#ff453a', GRAY = '#8e8e93';
@@ -506,6 +538,7 @@ function render(metrics, teamName, triageData = {}) {
 
   // Cycle summary
   let sHtml = '<table><thead><tr><th>Cycle</th><th>Completed</th><th>Pts</th><th>Ticket Types</th><th>Carry-over</th><th>Med. Lifespan</th><th>Scope Added</th><th>Contributors</th></tr></thead><tbody>';
+  const cycleBase = (orgSlug && teamKey) ? `https://linear.app/${orgSlug}/team/${teamKey}/cycles` : null;
   [...metrics].reverse().forEach(m => {
     const coClass = m.carryoverRate>40?'b-red':m.carryoverRate>20?'b-orange':'b-green';
 
@@ -524,8 +557,11 @@ function render(metrics, teamName, triageData = {}) {
       }).join(' ');
     }
 
+    const cycleHref = cycleBase ? `${cycleBase}/${m.cycle.number}` : null;
+    const cycleLinkOpen  = cycleHref ? `<a href="${cycleHref}" target="_blank" class="cycle-link">` : '';
+    const cycleLinkClose = cycleHref ? '</a>' : '';
     sHtml += `<tr class="${m.isCurrent?'current-row':''}">
-      <td>${m.isCurrent?'<span class="pill pill-current">Current</span> <strong>'+m.label+'</strong>':m.label}</td>
+      <td>${m.isCurrent?'<span class="pill pill-current">Current</span> <strong>'+cycleLinkOpen+m.label+cycleLinkClose+'</strong>':cycleLinkOpen+m.label+cycleLinkClose}</td>
       <td><strong>${m.velocityCount}</strong></td>
       <td>${m.velocityPoints>0?m.velocityPoints+'pts':'<span class="dim">—</span>'}</td>
       <td>${typeCell}</td>
