@@ -75,6 +75,7 @@ async function fetchObservations(toolName: string | null, fromDate: Date): Promi
       fromStartTime: fromDate.toISOString(),
       limit: "100",
       type: "SPAN",
+      fields: "core,basic,metrics",
     });
     if (toolName) params.set("name", toolName);
     if (cursor)   params.set("cursor", cursor);
@@ -156,7 +157,7 @@ function reportLatency(observations: Observation[]): void {
   console.log(`  p50:  ${percentile(latenciesMs, 50).toFixed(1).padStart(9)} ms`);
   console.log(`  p90:  ${percentile(latenciesMs, 90).toFixed(1).padStart(9)} ms`);
   console.log(`  p99:  ${percentile(latenciesMs, 99).toFixed(1).padStart(9)} ms`);
-  console.log(`  max:  ${Math.max(...latenciesMs).toFixed(1).padStart(9)} ms`);
+  console.log(`  max:  ${latenciesMs[latenciesMs.length - 1].toFixed(1).padStart(9)} ms`);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
