@@ -2,18 +2,19 @@
 /**
  * Langfuse model-confirmation check.
  *
- * Confirms that recent Atlas LLM generations in a Langfuse project were served
- * by an expected model (e.g. gpt-5.4-mini), and optionally that tool-calling
- * spans are present. Intended to verify ATLAS-3699 in staging after deploy.
+ * Reports the model(s) that recently served Atlas LLM generations in a Langfuse
+ * project, and optionally PASS/FAILs against an expected model. Also optionally
+ * reports tool-calling spans.
  *
  * Reads LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, LANGFUSE_BASE_URL from env
- * (point these at the STAGING Langfuse project).
+ * (point these at the target environment's Langfuse project).
  *
  * Usage:
  *   npx tsx verify-langfuse-model.ts \
- *     [--expect gpt-5.4-mini] [--minutes 30] [--check-tools] [--json]
+ *     [--expect <model>] [--minutes 30] [--environment <env>] [--check-tools] [--json]
  *
- * Exit code: 0 if a generation matching --expect was found, 1 otherwise
+ * Without --expect: lists the models seen (exit 0 if any generations found, else 1).
+ * With --expect:    exit 0 if a generation matching --expect was found, 1 otherwise
  * (so it can gate a script / CI step).
  */
 
@@ -21,7 +22,7 @@ import { parseArgs } from "node:util";
 
 const { values: args } = parseArgs({
   options: {
-    expect:        { type: "string",  default: "gpt-5.4-mini" },
+    expect:        { type: "string",  default: undefined },
     minutes:       { type: "string",  default: "30" },
     environment:   { type: "string",  default: undefined },
     "check-tools": { type: "boolean", default: false },
@@ -30,7 +31,11 @@ const { values: args } = parseArgs({
   allowPositionals: false,
 });
 
-const EXPECT_MODEL = (args.expect ?? "gpt-5.4-mini").toLowerCase();
+// --expect is optional. Without it we just REPORT the models seen in the window
+// (confirms "a message landed and which model served it"); with it we also
+// PASS/FAIL on whether that specific model served a generation.
+const EXPECT_MODEL = (args.expect ?? "").toLowerCase();
+const HAS_EXPECT = EXPECT_MODEL.length > 0;
 // Langfuse stores the resolved model in the observation NAME (e.g.
 // "chat gpt54mini-2026-03-17" for Azure, "chat gpt-5.4-mini-2026-03-17" for
 // litellm) — the `model` field comes back null via this API. Match the name
@@ -74,17 +79,30 @@ interface ObservationsResponse {
   meta: { cursor?: string };
 }
 
-async function fetchObservations(type: string, fromDate: Date, environment: string | null): Promise<Observation[]> {
-  const out: Observation[] = [];
+/**
+ * Fetch observations newest-first and keep those within `windowMin` of the most
+ * recent observation — a DATA-ANCHORED window. We deliberately do NOT use
+ * `fromStartTime: now - windowMin`, because the local clock can be skewed from
+ * the trace timestamps (observed ~38 min on a sandbox), which silently drops
+ * real recent traces. Anchoring to the newest observed startTime is clock-safe.
+ *
+ * Pass `cutoffMsOverride` to reuse another fetch's window (so SPANs share the
+ * GENERATION window). Returns the rows kept and the cutoff used.
+ */
+async function fetchRecent(
+  type: string,
+  environment: string | null,
+  windowMin: number,
+  cutoffMsOverride: number | null,
+): Promise<{ rows: Observation[]; cutoffMs: number | null; anchorIso: string | null }> {
+  const rows: Observation[] = [];
   let cursor: string | undefined;
+  let cutoffMs = cutoffMsOverride;
+  let anchorIso: string | null = null;
+  let pages = 0;
 
-  do {
-    const params = new URLSearchParams({
-      fromStartTime: fromDate.toISOString(),
-      type,
-      limit: "100",
-      fields: "core,basic,metrics",
-    });
+  outer: do {
+    const params = new URLSearchParams({ type, limit: "100", fields: "core,basic,metrics" });
     if (environment) params.set("environment", environment);
     if (cursor) params.set("cursor", cursor);
 
@@ -96,27 +114,34 @@ async function fetchObservations(type: string, fromDate: Date, environment: stri
       process.exit(2);
     }
     const body = (await res.json()) as ObservationsResponse;
-    out.push(...body.data);
-    cursor = body.meta?.cursor;
-  } while (cursor);
 
-  return out;
+    for (const obs of body.data) {
+      const t = obs.startTime ? Date.parse(obs.startTime) : NaN;
+      if (!Number.isFinite(t)) continue;
+      if (cutoffMs === null) { anchorIso = obs.startTime; cutoffMs = t - windowMin * 60_000; }
+      if (t >= cutoffMs) rows.push(obs);
+      else break outer; // results are newest-first, so we're past the window
+    }
+    cursor = body.meta?.cursor;
+  } while (cursor && ++pages < 50);
+
+  return { rows, cutoffMs, anchorIso };
 }
 
 async function main() {
-const fromDate = new Date(Date.now() - WINDOW_MIN * 60 * 1000);
-
 // Belt-and-braces: filter by environment client-side too, in case the API
 // ignores the param (staging + prod share one project).
 const inEnv = (o: Observation) => !ENVIRONMENT || o.environment === ENVIRONMENT;
 
-const generations = (await fetchObservations("GENERATION", fromDate, ENVIRONMENT)).filter(inEnv);
+const gen = await fetchRecent("GENERATION", ENVIRONMENT, WINDOW_MIN, null);
+const generations = gen.rows.filter(inEnv);
 // Most recent first
 generations.sort((a, b) => (b.startTime ?? "").localeCompare(a.startTime ?? ""));
 
 // The model lives in the name (model field is null); derive it for display + matching.
 const modelOf = (o: Observation) => (o.model ?? (o.name ?? "").replace(/^(chat|embeddings|execute_tool)\s+/i, "") ?? "(unknown)");
 const matchesExpect = (o: Observation) => {
+  if (!HAS_EXPECT) return false;
   const hay = `${o.name ?? ""} ${o.model ?? ""}`.toLowerCase();
   return hay.includes(EXPECT_MODEL) || hay.includes(EXPECT_COMPACT);
 };
@@ -125,16 +150,17 @@ const matched = generations.filter(matchesExpect);
 
 let toolSpans: Observation[] = [];
 if (CHECK_TOOLS) {
-  const spans = (await fetchObservations("SPAN", fromDate, ENVIRONMENT)).filter(inEnv);
-  toolSpans = spans.filter((s) => /tool|function/i.test(s.name ?? ""));
+  // Reuse the generations' window so spans line up with the same activity.
+  const sp = await fetchRecent("SPAN", ENVIRONMENT, WINDOW_MIN, gen.cutoffMs);
+  toolSpans = sp.rows.filter(inEnv).filter((s) => /tool|function/i.test(s.name ?? ""));
 }
 
 if (AS_JSON) {
   console.log(JSON.stringify({
-    expect: EXPECT_MODEL,
+    expect: HAS_EXPECT ? EXPECT_MODEL : null,
     windowMinutes: WINDOW_MIN,
     generationsFound: generations.length,
-    matchedExpectedModel: matched.length,
+    matchedExpectedModel: HAS_EXPECT ? matched.length : undefined,
     distinctModels: [...new Set(generations.map(modelOf))],
     toolSpans: CHECK_TOOLS ? toolSpans.length : undefined,
     sample: generations.slice(0, 10).map((g) => ({
@@ -142,16 +168,21 @@ if (AS_JSON) {
     })),
   }, null, 2));
 } else {
-  console.log(`\nLangfuse model check — expecting "${EXPECT_MODEL}" in the last ${WINDOW_MIN} min`);
+  console.log(
+    HAS_EXPECT
+      ? `\nLangfuse model check — expecting "${EXPECT_MODEL}" within ${WINDOW_MIN} min of the newest trace`
+      : `\nLangfuse model report — models within ${WINDOW_MIN} min of the newest trace`
+  );
   console.log(`Base URL: ${BASE_URL}`);
   console.log(`Environment filter: ${ENVIRONMENT ?? "(none — all envs in project)"}`);
+  console.log(`Window anchor (newest trace): ${gen.anchorIso ?? "(none found)"}`);
   console.log(`\nGenerations found: ${generations.length}`);
   if (generations.length > 0) {
     const models = new Map<string, number>();
     for (const g of generations) { const m = modelOf(g); models.set(m, (models.get(m) ?? 0) + 1); }
     console.log("Models seen (from observation name):");
     for (const [m, n] of [...models.entries()].sort((a, b) => b[1] - a[1])) {
-      const hit = m.toLowerCase().includes(EXPECT_MODEL) || m.toLowerCase().includes(EXPECT_COMPACT);
+      const hit = HAS_EXPECT && (m.toLowerCase().includes(EXPECT_MODEL) || m.toLowerCase().includes(EXPECT_COMPACT));
       console.log(`  ${hit ? "✅" : "  "} ${m.padEnd(28)} ${n}`);
     }
     console.log("\nMost recent generations:");
@@ -164,17 +195,26 @@ if (AS_JSON) {
     console.log(`\nTool-call spans (name ~ tool/function): ${toolSpans.length}`);
     for (const t of toolSpans.slice(0, 10)) console.log(`  ${t.startTime}  ${t.name}  trace=${t.traceId}`);
   }
-  console.log(
-    matched.length > 0
-      ? `\n✅ PASS — ${matched.length} generation(s) served by "${EXPECT_MODEL}".`
-      : `\n❌ FAIL — no generations served by "${EXPECT_MODEL}" in the window.`
-  );
+  if (HAS_EXPECT) {
+    console.log(
+      matched.length > 0
+        ? `\n✅ PASS — ${matched.length} generation(s) served by "${EXPECT_MODEL}".`
+        : `\n❌ FAIL — no generations served by "${EXPECT_MODEL}" in the window.`
+    );
+  } else {
+    console.log(
+      generations.length > 0
+        ? `\n✅ ${generations.length} generation(s) found — see models above.`
+        : `\n❌ No generations found in the window.`
+    );
+  }
   if (CHECK_TOOLS) {
     console.log(toolSpans.length > 0 ? "✅ Tool-calling spans present." : "⚠️  No tool-calling spans in the window.");
   }
 }
 
-process.exit(matched.length > 0 ? 0 : 1);
+// Exit 0 when the assertion holds: a matching model with --expect, else any generation.
+process.exit((HAS_EXPECT ? matched.length > 0 : generations.length > 0) ? 0 : 1);
 }
 
 main().catch((e) => { console.error(e); process.exit(2); });
