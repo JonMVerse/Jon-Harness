@@ -91,9 +91,9 @@ interface ObservationsResponse {
  */
 async function fetchRecent(
   type: string,
-  environment: string | null,
   windowMin: number,
   cutoffMsOverride: number | null,
+  envMatch: (o: Observation) => boolean,
 ): Promise<{ rows: Observation[]; cutoffMs: number | null; anchorIso: string | null }> {
   const rows: Observation[] = [];
   let cursor: string | undefined;
@@ -101,9 +101,14 @@ async function fetchRecent(
   let anchorIso: string | null = null;
   let pages = 0;
 
+  // NOTE: we deliberately do NOT pass the server-side `environment` param. It does
+  // not return results strictly newest-first, which breaks the data-anchored window
+  // (it would anchor to a stale trace and miss newer ones). Instead we fetch all
+  // environments newest-first and filter by environment CLIENT-SIDE here, anchoring
+  // the window to the newest observation that MATCHES the target environment — so a
+  // quiet target env isn't squeezed out by a noisier one (e.g. prod vs staging).
   outer: do {
     const params = new URLSearchParams({ type, limit: "100", fields: "core,basic,metrics" });
-    if (environment) params.set("environment", environment);
     if (cursor) params.set("cursor", cursor);
 
     const res = await fetch(`${BASE_URL}/api/public/v2/observations?${params}`, {
@@ -116,11 +121,12 @@ async function fetchRecent(
     const body = (await res.json()) as ObservationsResponse;
 
     for (const obs of body.data) {
+      if (!envMatch(obs)) continue; // only consider target-environment rows
       const t = obs.startTime ? Date.parse(obs.startTime) : NaN;
       if (!Number.isFinite(t)) continue;
       if (cutoffMs === null) { anchorIso = obs.startTime; cutoffMs = t - windowMin * 60_000; }
       if (t >= cutoffMs) rows.push(obs);
-      else break outer; // results are newest-first, so we're past the window
+      else break outer; // newest-first, so we're past the window for this env
     }
     cursor = body.meta?.cursor;
   } while (cursor && ++pages < 50);
@@ -133,7 +139,7 @@ async function main() {
 // ignores the param (staging + prod share one project).
 const inEnv = (o: Observation) => !ENVIRONMENT || o.environment === ENVIRONMENT;
 
-const gen = await fetchRecent("GENERATION", ENVIRONMENT, WINDOW_MIN, null);
+const gen = await fetchRecent("GENERATION", WINDOW_MIN, null, inEnv);
 const generations = gen.rows.filter(inEnv);
 // Most recent first
 generations.sort((a, b) => (b.startTime ?? "").localeCompare(a.startTime ?? ""));
@@ -153,7 +159,7 @@ if (CHECK_TOOLS) {
   // Atlas tool calls are observation type=TOOL, named after the function (e.g.
   // "intercom_search", "ksb_search") — NOT SPANs named "execute_tool". Reuse the
   // generations' window so the tool calls line up with the same activity.
-  const sp = await fetchRecent("TOOL", ENVIRONMENT, WINDOW_MIN, gen.cutoffMs);
+  const sp = await fetchRecent("TOOL", WINDOW_MIN, gen.cutoffMs, inEnv);
   toolSpans = sp.rows.filter(inEnv);
 }
 
