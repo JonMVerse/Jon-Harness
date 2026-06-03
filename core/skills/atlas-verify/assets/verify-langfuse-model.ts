@@ -150,9 +150,11 @@ const matched = generations.filter(matchesExpect);
 
 let toolSpans: Observation[] = [];
 if (CHECK_TOOLS) {
-  // Reuse the generations' window so spans line up with the same activity.
-  const sp = await fetchRecent("SPAN", ENVIRONMENT, WINDOW_MIN, gen.cutoffMs);
-  toolSpans = sp.rows.filter(inEnv).filter((s) => /tool|function/i.test(s.name ?? ""));
+  // Atlas tool calls are observation type=TOOL, named after the function (e.g.
+  // "intercom_search", "ksb_search") — NOT SPANs named "execute_tool". Reuse the
+  // generations' window so the tool calls line up with the same activity.
+  const sp = await fetchRecent("TOOL", ENVIRONMENT, WINDOW_MIN, gen.cutoffMs);
+  toolSpans = sp.rows.filter(inEnv);
 }
 
 if (AS_JSON) {
@@ -192,7 +194,7 @@ if (AS_JSON) {
     }
   }
   if (CHECK_TOOLS) {
-    console.log(`\nTool-call spans (name ~ tool/function): ${toolSpans.length}`);
+    console.log(`\nTool calls (observation type=TOOL): ${toolSpans.length}`);
     for (const t of toolSpans.slice(0, 10)) console.log(`  ${t.startTime}  ${t.name}  trace=${t.traceId}`);
   }
   if (HAS_EXPECT) {
@@ -209,7 +211,7 @@ if (AS_JSON) {
     );
   }
   if (CHECK_TOOLS) {
-    console.log(toolSpans.length > 0 ? "✅ Tool-calling spans present." : "⚠️  No tool-calling spans in the window.");
+    console.log(toolSpans.length > 0 ? "✅ Tool calls present." : "⚠️  No tool calls in the window.");
   }
 }
 

@@ -116,4 +116,7 @@ dots-stripped Azure deployment form (so `--expect gpt-5.4-mini` matches either).
 - Staging/prod use **real auth** — the dev-login bypass may be disabled; if so use a
   captured `STORAGE_STATE`.
 - Tool calling requires the relevant per-user tool feature flags on for the test user.
+  In Langfuse, tool calls are observation **type=`TOOL`** named after the function
+  (e.g. `intercom_search`, `ksb_search`) — not SPANs named `execute_tool`. `--check-tools`
+  queries `type=TOOL`.
 - `HEADLESS=false` to watch the browser; `SCREENSHOT=<path>` to relocate the capture.
