@@ -1,0 +1,18 @@
+{
+  "name": "atlas-verify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Converse with Atlas (GraphQL/SSE) and confirm the serving model in Langfuse.",
+  "type": "module",
+  "scripts": {
+    "converse": "tsx assets/converse-atlas.ts",
+    "verify": "tsx assets/verify-langfuse-model.ts",
+    "setup:ui": "npm i playwright && playwright install chromium"
+  },
+  "dependencies": {
+    "graphql-ws": "^6.0.8",
+    "tsx": "^4.19.0",
+    "ws": "^8.18.0"
+  },
+  "comment": "API mode (default) needs only the deps above. UI mode (MODE=ui) also needs Playwright: run `npm run setup:ui`."
+}
