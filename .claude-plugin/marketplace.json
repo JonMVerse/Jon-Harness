@@ -1,6 +1,6 @@
 {
     "name": "mv-claude-harness",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Custom Claude Code plugins for project bootstrapping and development",
     "owner": {
         "name": "Multiverse"
@@ -8,9 +8,15 @@
     "plugins": [
         {
             "name": "core",
-            "version": "2.2.0",
+            "version": "3.7.0",
             "source": "./core",
             "description": "Core plugins for working with Claude Code"
+        },
+        {
+            "name": "security",
+            "version": "0.3.1",
+            "source": "./security",
+            "description": "AI governance assessment — discovery, data classification, council deliberation, decision-grade tickets"
         }
     ]
 }

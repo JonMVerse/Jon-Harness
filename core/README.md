@@ -9,7 +9,7 @@ Components mapped onto the lifecycle:
 | Phase  | Components                                                                |
 |--------|---------------------------------------------------------------------------|
 | Plan   | `rename-plan` hook · `/plan-status`                                       |
-| Build  | `feature-creator`, `code-explorer`, `claude-md-generator` agents          |
+| Build  | `code-explorer` agent                                                     |
 | Review | `/review` · `code-reviewer`, `security-reviewer`, `tech-debt-reviewer` agents |
 | Test   | `/pw-test`, `/a11y-audit` · `test-generator` agent · `playwright-cli`, `a11y-audit` skills |
 | Learn  | `/wrap-up` · `learn`, `wrap-up` skills · `documentation-generator` agent  |
@@ -25,9 +25,7 @@ Long-running, autonomous workers for complex tasks.
 | `security-reviewer` | Vulnerability scanning, unsafe patterns, exposed secrets |
 | `tech-debt-reviewer` | Maintainability, dead code, duplication |
 | `test-generator` | Runner-agnostic TypeScript unit tests (Jest / Vitest / `node:test`); follows host project's testing standards |
-| `feature-creator` | End-to-end feature implementation |
 | `documentation-generator` | Architectural docs (the "why" / navigation); detects host's doc convention (CLAUDE.md / AGENTS.md / etc.) and updates in place |
-| `claude-md-generator` | Bootstraps CLAUDE.md steering files |
 | `code-explorer` | Codebase navigation and understanding |
 
 Invoke via `/agent <name>` or trigger automatically through the commands that compose them (e.g. `/review`).

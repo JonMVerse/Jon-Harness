@@ -1,6 +1,6 @@
 ---
 name: learn
-description: "Self-improving loop for the project's institutional knowledge. This project maintains a structured knowledge system — a root CLAUDE.md that indexes standards docs (error handling, database, security, accessibility, etc.), directory-level CLAUDE.md files for each module, and dedicated docs for cross-cutting concerns. These steering docs are what enable high-quality, consistent, secure code across every session. Invoke /learn after sessions where mistakes were made, corrections given, or non-obvious patterns validated. It scans the conversation, extracts generalizable lessons, and updates the right doc so the same mistake never happens twice. User-invoked only — never triggers automatically."
+description: "Self-improving loop for the project's institutional knowledge. This project maintains a structured knowledge system — a root CLAUDE.md that indexes standards docs (error handling, database, security, accessibility, etc.), directory-level CLAUDE.md files for each module, and dedicated docs for cross-cutting concerns. These steering docs are what enable high-quality, consistent, secure code across every session. Invoke /learn after sessions where mistakes were made, corrections given, or non-obvious patterns validated. It scans the conversation, extracts generalizable lessons, and updates the right doc so the same mistake never happens twice. Invoked deliberately — directly via /learn, or by doc-update as its steering stream during a close-out; it never fires from a hook or on its own initiative."
 user-invocable: true
 ---
 
@@ -9,6 +9,8 @@ user-invocable: true
 This project's code quality depends on a structured knowledge system: CLAUDE.md files, standards docs, and conventions that steer every future session. When a session surfaces a correction, a bug from a bad assumption, or a pattern that worked well, that knowledge needs to flow back into the docs — otherwise the next session will make the same mistake.
 
 This skill closes that loop. It reads the conversation, extracts what was learned, and updates the right steering doc. It never touches application code.
+
+Run it standalone any time a session surfaces a lesson, or as the steering + memory stream of `doc-update` (which pairs it with an architectural-doc refresh). Either way, this skill owns the logic for *what* gets learned and *where* it goes.
 
 ## What to look for
 

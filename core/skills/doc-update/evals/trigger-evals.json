@@ -1,0 +1,50 @@
+[
+  {
+    "query": "update the docs to match what we just changed",
+    "should_trigger": true
+  },
+  {
+    "query": "sync the documentation with the new code",
+    "should_trigger": true
+  },
+  {
+    "query": "the docs are stale now, refresh them",
+    "should_trigger": true
+  },
+  {
+    "query": "we added a new module, update the architecture docs",
+    "should_trigger": true
+  },
+  {
+    "query": "propagate these changes into the documentation",
+    "should_trigger": true
+  },
+  {
+    "query": "refresh the CLAUDE.md and steering docs for what changed",
+    "should_trigger": true
+  },
+  {
+    "query": "commit these changes",
+    "should_trigger": false
+  },
+  {
+    "query": "wrap up and close out the plan",
+    "should_trigger": false
+  },
+  {
+    "query": "review the code I just wrote",
+    "should_trigger": false
+  },
+  {
+    "query": "write me some new documentation from scratch for this idea",
+    "should_trigger": false
+  },
+  {
+    "query": "run the tests",
+    "should_trigger": false
+  },
+  {
+    "query": "what changed since the last release",
+    "should_trigger": false
+  }
+]
