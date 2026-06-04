@@ -6,6 +6,25 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.7.0] — 2026-06-04
+Synced with upstream `Multiverse-io/mv-claude-harness` (core v2.9.1). Custom skills
+(`atlas-*`, `langfuse-query`, `linear-em-dashboard`, `mv-slides`, `onboarding-clone`) and
+the agents' Socratic communication style are preserved.
+- Added core skills **`doc-update`** (propagate session changes into docs/steering, fanning
+  out `documentation-generator` writers) and **`goal-prep`** (shape work into a `/goal`
+  bootstrap string).
+- Core cleanups from upstream: `/warp` prompt-only, `/learn` ref fix, the **layered
+  doc/steering close-out loop** in `wrap-up`, and refreshed `commit` / `review` / `a11y-audit`.
+- `documentation-generator` updated to upstream's `doc-update`-dispatched version (Socratic
+  block re-applied). **Removed legacy agents** `claude-md-generator` + `feature-creator`
+  (matching upstream); cleaned README references.
+- **Doc/steering restructure**: root `CLAUDE.md` is now a cross-plugin index that
+  `@`-includes per-plugin steering (`core/CLAUDE.md`, `security/CLAUDE.md`); the
+  `github-project-tickets` nested-dir note is preserved in `core/CLAUDE.md`.
+- **Suite:** added the new **`security`** (AI governance) plugin alongside `core` →
+  `marketplace.json` v1.2.0. `atlas-ai-assessment` kept as-is.
+- Added a read-only `upstream` git remote for future diffs.
+
 ## [3.6.0] — 2026-06-04
 - `atlas-verify`: added a browserless **API mode** (default) — GraphQL `askAtlas`/
   `sendMessage` + `botResponseStream`/`threadMessageSent` (graphql-ws) for `atlas`, and

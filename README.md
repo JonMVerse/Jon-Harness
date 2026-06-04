@@ -42,7 +42,7 @@ mode                    /a11y     │
 | Phase  | What it gives you                                          | Tool                           |
 |--------|------------------------------------------------------------|--------------------------------|
 | Plan   | Persistent dated plan folders + worklog                    | plan mode + `rename-plan` hook |
-| Build  | Codebase-aware agents that explore and implement           | `feature-creator` agent        |
+| Build  | Codebase-aware agent that explores the codebase            | `code-explorer` agent          |
 | Review | Three reviewers (logic, security, tech-debt) in parallel   | `/review`                      |
 | Test   | Exploratory + generated E2E and accessibility tests        | `/pw-test`, `/a11y-audit`      |
 | Learn  | Patterns from the session land in your `CLAUDE.md`         | `/wrap-up`, `/learn`           |
@@ -117,7 +117,7 @@ Keep each file under ~200 lines for best adherence.
 
 ## What ships
 
-- **Agents** — `code-reviewer`, `security-reviewer`, `tech-debt-reviewer`, `test-generator`, `feature-creator`, …
+- **Agents** — `code-reviewer`, `security-reviewer`, `tech-debt-reviewer`, `test-generator`, `documentation-generator`, `code-explorer`
 - **Commands** — `/review`, `/commit`, `/wrap-up`, `/pw-test`, `/a11y-audit`, `/gen-changelog`, …
 - **Skills** — `playwright-cli`, `a11y-audit`, `learn`, `github-project-tickets`, …
 - **Hooks** — `rename-plan` mirrors plan-mode files into the project automatically. Wiring in [`core/HOOKS.md`](core/HOOKS.md).

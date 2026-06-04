@@ -22,7 +22,7 @@ Report the file list before proceeding. If more than 15 files, confirm with the 
 
 ### 2. Load Project Standards
 
-Check for `A11Y_STANDARDS.md` at the project root. If it exists, read it — those are the authoritative rules for this project and supplement the checklist below. If it doesn't exist, proceed with the built-in checklist only.
+Check for `A11Y_STANDARDS.md` at the project root or the projects steering documentation. If it exists, read it — those are the authoritative rules for this project and supplement the checklist below. If it doesn't exist, proceed with the built-in checklist only flagging you cannot find the wider set of rules "CANNOT LOCATE A11Y_STANDARDS.md, USING BUILT IN CHECKLIST ONLY".
 
 ### 3. Audit Each File
 

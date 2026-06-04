@@ -1,0 +1,13 @@
+{
+    "name": "security",
+    "description": "AI governance for the current repo: discovery, data classification, and a five-domain assessment (Privacy, Security, Legal, Workforce, Oversight). Produces a governance/ directory of committable artefacts.",
+    "version": "0.3.1",
+    "author": {
+        "name": "Multiverse"
+    },
+    "keywords": ["security", "governance", "compliance", "ai-act", "gdpr", "privacy", "dpia", "assessment"],
+    "skills": [
+        "./skills/governance-discovery",
+        "./skills/data-classification"
+    ]
+}
