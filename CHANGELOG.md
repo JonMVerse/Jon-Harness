@@ -6,13 +6,19 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.6.0] — 2026-06-04
+- `atlas-verify`: added a browserless **API mode** (default) — GraphQL `askAtlas`/
+  `sendMessage` + `botResponseStream`/`threadMessageSent` (graphql-ws) for `atlas`, and
+  `POST /api/chat` + SSE for `atlas-2`; the Playwright **UI mode** is kept as a
+  lazy-loaded fallback (`MODE=ui`). Replies stream to the terminal.
+- `atlas-verify`: added `package.json` (deps resolve via `npm install`; `npm run
+  setup:ui` for Playwright), `.gitignore`, and `ONBOARDING.md`.
+- `atlas-verify`: Langfuse verifier filters environment client-side and anchors the
+  window to the newest trace in the target environment; `--expect` is now optional.
+
 ## [3.5.0] — 2026-06-03
 - Renamed the `atlas-staging-verify` skill → **`atlas-verify`**.
 - `atlas-verify`: tool calls are read as Langfuse observation `type=TOOL`.
-- `atlas-verify`: added a browserless **API mode** (default) — GraphQL `askAtlas`/
-  `sendMessage` + `botResponseStream`/`threadMessageSent` for `atlas`, `POST /api/chat`
-  + SSE for `atlas-2`; Playwright **UI mode** kept as a lazy-loaded fallback. Added
-  `package.json` so deps resolve, plus `ONBOARDING.md`. (Merged under 3.5.0.)
 
 ## [3.4.0] — 2026-06-03
 - Added the **`atlas-staging-verify`** skill (drive staging Ask Atlas + confirm the
@@ -70,4 +76,4 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 - Initial marketplace, manifest, and folder structure (first plugin: react).
 - Clean-ups and commit-command tweaks across 1.0.1–1.0.5.
 
-[3.5.0]: https://github.com/JonMVerse/Jon-Harness/commits/main
+[3.6.0]: https://github.com/JonMVerse/Jon-Harness/commits/main
