@@ -82,3 +82,32 @@ row, plus the expected-tools list and pass criteria.
 
 Phases 2–3 would graduate this from "feasibility + design" into a PoC and then a full
 plan-ingesting harness skill — out of scope for this pass.
+
+## Phase-1 PoC — built, and what the first run found
+
+`assets/run-test-plan.ts` (+ `assets/sample-scenarios.json`) implements the loop: per scenario
+it runs `converse-atlas` (API mode), then attributes any **newer** Langfuse `GENERATION`/`TOOL`
+observations to it (data-anchored watermark — clock-skew-safe), and reports `pass` / `fail`
+(tool genuinely missing) / `error` (infra). Run it with `ATLAS_AUTH` (staging `mv_auth`) +
+`LANGFUSE_*` env set.
+
+**First staging run surfaced a real blocker — the assertion signal is missing for API mode:**
+
+- ✅ The runner orchestration works, and `converse-atlas` API mode returns real multi-turn bot
+  replies from staging (auth via the `mv_auth_staging` session token).
+- ❌ **API-mode conversations did not produce a queryable Langfuse `chat` trace** in this project
+  (checked all environments; Langfuse was ingesting other producers in real-time). So
+  `verify-langfuse-model --check-tools` has nothing to read → tool usage can't be confirmed.
+- Correction this exposed: the earlier "validated on staging (ksb_search)" result came from a
+  message **sent in the staging UI** (traced as `env=staging` in ~45s), **not** from
+  `converse-atlas`. API-mode → Langfuse was never actually proven, and this PoC shows it doesn't
+  surface as wired.
+
+**To unblock (pick one):**
+1. Confirm with the Async/Atlas team **where API-initiated staging turns trace** (Langfuse
+   project + `environment` tag) and point the verifier there.
+2. Run Phase-1 in **`MODE=ui`** — the path proven to trace today (also unlocks §8-I page-context).
+3. Read tool usage from a **non-Langfuse signal** (GraphQL response payload / Datadog spans).
+
+Raising the ingest timeout won't help — the trace genuinely isn't in the project, not merely late.
+

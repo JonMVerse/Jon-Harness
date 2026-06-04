@@ -1,0 +1,20 @@
+[
+  {
+    "id": "S1-ksb",
+    "messages": ["What is a KSB, and can you give me one concrete example from my apprenticeship?"],
+    "expectedTools": ["ksb_search"],
+    "note": "KSB lookup — ksb_search is a live tool (proven to fire on staging earlier)."
+  },
+  {
+    "id": "S2-support",
+    "messages": ["How do I submit my project for review in the platform? Walk me through the steps."],
+    "expectedTools": ["intercom_search"],
+    "note": "Platform how-to/support content → intercom_search (live tool)."
+  },
+  {
+    "id": "S3-pathway",
+    "messages": ["What does my programme cover overall — what are my modules and the units inside them?"],
+    "expectedTools": ["get_pathway"],
+    "note": "Programme structure → get_pathway (stub tool; may be feature-flag-gated on staging — a useful test of the runner detecting a missed tool)."
+  }
+]
