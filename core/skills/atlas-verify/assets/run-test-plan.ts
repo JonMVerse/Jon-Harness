@@ -32,13 +32,17 @@ const REPO = process.env.REPO ?? "atlas";
 const SCENARIOS_PATH = process.env.SCENARIOS ?? resolve(HERE, "sample-scenarios.json");
 const INGEST_TIMEOUT_MS = 180_000; // how long to wait for a trace to land
 const TOOL_SETTLE_MS = 20_000; // after the reply lands, wait for tool spans to flush
+// CAPTURE_ONLY: run the conversation, print the reply + confirm the environment, and
+// SKIP the Langfuse tool assertion entirely. Useful while API-mode tracing is unresolved
+// (and while curriculum tools are stubbed). Needs ATLAS_AUTH only — no Langfuse creds.
+const CAPTURE_ONLY = process.env.CAPTURE_ONLY === "true";
 
 const SECRET = process.env.LANGFUSE_SECRET_KEY ?? "";
 const PUBLIC = process.env.LANGFUSE_PUBLIC_KEY ?? "";
 const BASE = (process.env.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com").replace(/\/$/, "");
 
 if (!process.env.ATLAS_AUTH) { console.error("ERROR: ATLAS_AUTH (staging mv_auth token) required."); process.exit(2); }
-if (!SECRET || !PUBLIC) { console.error("ERROR: LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY required."); process.exit(2); }
+if (!CAPTURE_ONLY && (!SECRET || !PUBLIC)) { console.error("ERROR: LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY required (or set CAPTURE_ONLY=true)."); process.exit(2); }
 const LF_AUTH = "Basic " + Buffer.from(`${PUBLIC}:${SECRET}`).toString("base64");
 
 interface Scenario { id: string; messages: string[]; expectedTools: string[]; note?: string; }
@@ -88,20 +92,20 @@ async function maxStart(): Promise<string> {
   return [...g, ...t].reduce((m, o) => (o.startTime && o.startTime > m ? o.startTime : m), "");
 }
 
-function runConverse(messages: string[]): { ok: boolean; reason: string } {
+function runConverse(messages: string[]): { ok: boolean; reason: string; out: string } {
   console.log(`  → converse-atlas (${messages.length} msg)…`);
   const r = spawnSync("npx", ["tsx", resolve(HERE, "converse-atlas.ts")], {
     env: { ...process.env, REPO, ENVIRONMENT, MODE: "api", MESSAGES_JSON: JSON.stringify(messages) },
     encoding: "utf8",
     timeout: 180_000,
   });
-  const blob = `${r.stdout ?? ""}${r.stderr ?? ""}`;
-  if (r.status === 0) return { ok: true, reason: "" };
-  const reason = /unauthor/i.test(blob)
+  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  if (r.status === 0) return { ok: true, reason: "", out };
+  const reason = /unauthor/i.test(out)
     ? "auth: staging mv_auth token expired/invalid — refresh atlas_mv_auth_staging"
-    : (blob.match(/Error:.*/)?.[0] ?? `converse-atlas exited ${r.status}`).slice(0, 160);
+    : (out.match(/Error:.*/)?.[0] ?? `converse-atlas exited ${r.status}`).slice(0, 160);
   console.log(`    ${reason}`);
-  return { ok: false, reason };
+  return { ok: false, reason, out };
 }
 
 /** Wait until a GENERATION newer than `since` appears, then return TOOL names newer than `since`. */
@@ -125,7 +129,29 @@ const matched = (expected: string, fired: string[]) =>
   fired.some((f) => f.toLowerCase().includes(expected.toLowerCase()));
 
 async function main() {
-  console.log(`Phase-1 test-plan run — repo=${REPO} env=${ENVIRONMENT} scenarios=${scenarios.length}\n`);
+  console.log(`Phase-1 test-plan run — repo=${REPO} env=${ENVIRONMENT} scenarios=${scenarios.length}${CAPTURE_ONLY ? " (capture-only — Langfuse step skipped)" : ""}\n`);
+
+  if (CAPTURE_ONLY) {
+    const cap: { id: string; env: string; api: string; ok: boolean; reason: string }[] = [];
+    for (const s of scenarios) {
+      console.log(`── ${s.id} ──`);
+      const conv = runConverse(s.messages);
+      const env = conv.out.match(/environment:\s*(\S+)/)?.[1] ?? "?";
+      const api = conv.out.match(/api url:\s*(\S+)/)?.[1] ?? "?";
+      const reply = (conv.out.match(/atlas>[\s\S]*?(?=\n+✅|\n+Thread id:|$)/g) ?? []).join("\n").trim();
+      console.log(`    env=${env}  api=${api}  ${conv.ok ? "✓ replied" : "ERROR: " + conv.reason}`);
+      if (reply) console.log(reply.split("\n").map((l) => "    " + l).join("\n"));
+      console.log();
+      cap.push({ id: s.id, env, api, ok: conv.ok, reason: conv.reason });
+    }
+    console.log("=== CAPTURE SUMMARY (Langfuse assertion skipped) ===");
+    for (const c of cap) console.log(`${c.id.padEnd(16)} env=${(c.env).padEnd(10)} ${c.ok ? "replied" : "ERROR " + c.reason}`);
+    const allStaging = cap.every((c) => c.env === ENVIRONMENT);
+    const replied = cap.filter((c) => c.ok).length;
+    console.log(`\n${replied}/${cap.length} got a reply · environment confirmed: ${allStaging ? `all "${ENVIRONMENT}"` : "MIXED/UNKNOWN — see above"}`);
+    process.exit(replied === cap.length && allStaging ? 0 : 1);
+  }
+
   type Status = "pass" | "fail" | "error";
   const results: { id: string; expected: string[]; fired: string[]; status: Status; reason: string }[] = [];
 
