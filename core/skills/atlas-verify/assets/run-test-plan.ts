@@ -21,7 +21,7 @@
  *
  * Scenario JSON: [{ "id": "...", "messages": ["..."], "expectedTools": ["ksb_search"], "note": "..." }]
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "staging";
 const REPO = process.env.REPO ?? "atlas";
 const SCENARIOS_PATH = process.env.SCENARIOS ?? resolve(HERE, "sample-scenarios.json");
-const INGEST_TIMEOUT_MS = 180_000; // how long to wait for a trace to land
+const INGEST_TIMEOUT_MS = Number(process.env.INGEST_TIMEOUT_MS ?? 300_000); // how long to wait for a trace to land (default 5 min)
 const TOOL_SETTLE_MS = 20_000; // after the reply lands, wait for tool spans to flush
 // CAPTURE_ONLY: run the conversation, print the reply + confirm the environment, and
 // SKIP the Langfuse tool assertion entirely. Useful while API-mode tracing is unresolved
@@ -45,7 +45,7 @@ if (!process.env.ATLAS_AUTH) { console.error("ERROR: ATLAS_AUTH (staging mv_auth
 if (!CAPTURE_ONLY && (!SECRET || !PUBLIC)) { console.error("ERROR: LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY required (or set CAPTURE_ONLY=true)."); process.exit(2); }
 const LF_AUTH = "Basic " + Buffer.from(`${PUBLIC}:${SECRET}`).toString("base64");
 
-interface Scenario { id: string; messages: string[]; expectedTools: string[]; note?: string; }
+interface Scenario { id: string; messages: string[]; expectedTools: string[]; forbidTools?: string[]; section?: string; note?: string; }
 interface Obs { type: string | null; name: string | null; startTime: string | null; traceId: string | null; environment: string | null; }
 
 const scenarios: Scenario[] = JSON.parse(readFileSync(SCENARIOS_PATH, "utf8"));
@@ -54,7 +54,7 @@ const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 // Langfuse Cloud occasionally drops a socket mid-request (UND_ERR_SOCKET). Retry
 // transient network/5xx errors so one blip doesn't kill a multi-minute run.
-async function lfFetch(url: string, attempts = 4): Promise<Response> {
+async function lfFetch(url: string, attempts = 6): Promise<Response> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -77,7 +77,7 @@ async function fetchObs(type: string): Promise<Obs[]> {
     const p = new URLSearchParams({ type, limit: "100", fields: "core,basic" });
     if (cursor) p.set("cursor", cursor);
     const res = await lfFetch(`${BASE}/api/public/v2/observations?${p}`);
-    if (!res.ok) { console.error(`Langfuse HTTP ${res.status}: ${await res.text()}`); process.exit(2); }
+    if (!res.ok) { throw new Error(`Langfuse HTTP ${res.status}: ${await res.text()}`); }
     const b = (await res.json()) as { data: Obs[]; meta?: { cursor?: string } };
     out.push(...b.data.filter((o) => o.environment === ENVIRONMENT));
     cursor = b.meta?.cursor;
@@ -108,8 +108,8 @@ function runConverse(messages: string[]): { ok: boolean; reason: string; out: st
   return { ok: false, reason, out };
 }
 
-/** Wait until a GENERATION newer than `since` appears, then return TOOL names newer than `since`. */
-async function toolsSince(since: string): Promise<{ tools: string[]; sawGeneration: boolean }> {
+/** Wait until a GENERATION newer than `since` appears, then return the models + TOOL names newer than `since`. */
+async function toolsSince(since: string): Promise<{ tools: string[]; models: string[]; sawGeneration: boolean }> {
   const start = Date.now();
   let sawGeneration = false;
   while (Date.now() - start < INGEST_TIMEOUT_MS) {
@@ -118,15 +118,28 @@ async function toolsSince(since: string): Promise<{ tools: string[]; sawGenerati
     await sleep(15_000);
   }
   if (sawGeneration) await sleep(TOOL_SETTLE_MS); // let tool spans flush
+  // Model lives in the GENERATION name ("chat <model>"); the model field is null via this API.
+  const models = [
+    ...new Set(
+      (await fetchObs("GENERATION"))
+        .filter((o) => o.startTime && o.startTime > since)
+        .map((o) => (o.name ?? "").replace(/^(chat|embeddings|execute_tool)\s+/i, ""))
+        .filter(Boolean),
+    ),
+  ];
   const tools = (await fetchObs("TOOL"))
     .filter((o) => o.startTime && o.startTime > since)
     .map((o) => o.name ?? "")
     .filter(Boolean);
-  return { tools, sawGeneration };
+  return { tools, models, sawGeneration };
 }
 
 const matched = (expected: string, fired: string[]) =>
   fired.some((f) => f.toLowerCase().includes(expected.toLowerCase()));
+
+const extractReply = (out: string) =>
+  (out.match(/atlas>[\s\S]*?(?=\n+✅|\n+Thread id:|$)/g) ?? []).join("\n").replace(/atlas>\s?/g, "").trim();
+const RESULTS_OUT = process.env.RESULTS_OUT ?? "/tmp/run-test-plan-results.json";
 
 async function main() {
   console.log(`Phase-1 test-plan run — repo=${REPO} env=${ENVIRONMENT} scenarios=${scenarios.length}${CAPTURE_ONLY ? " (capture-only — Langfuse step skipped)" : ""}\n`);
@@ -153,31 +166,53 @@ async function main() {
   }
 
   type Status = "pass" | "fail" | "error";
-  const results: { id: string; expected: string[]; fired: string[]; status: Status; reason: string }[] = [];
+  interface Result { id: string; section: string; prompt: string; response: string; models: string[]; expected: string[]; forbidden: string[]; fired: string[]; status: Status; reason: string }
+  const results: Result[] = [];
+  const writeResults = () => writeFileSync(RESULTS_OUT, JSON.stringify(results, null, 2)); // incremental — survives a mid-run abort
 
   for (const s of scenarios) {
-    console.log(`── ${s.id} ──  expect tools: [${s.expectedTools.join(", ")}]`);
-    const since = await maxStart();
+    const forbid = s.forbidTools ?? [];
+    console.log(`── ${s.id} ──  expect: [${s.expectedTools.join(", ")}]${forbid.length ? `  forbid: [${forbid.join(", ")}]` : ""}`);
+    const prompt = s.messages.join(" / ");
+    const section = s.section ?? "";
+    // Langfuse calls are wrapped so a transient network/DNS blip degrades THIS scenario
+    // to "error" (response still captured) instead of crashing the whole run.
+    const since = await maxStart().then((v) => v, () => null);
     const conv = runConverse(s.messages);
-    if (!conv.ok) { results.push({ id: s.id, expected: s.expectedTools, fired: [], status: "error", reason: conv.reason }); console.log(); continue; }
-    const { tools, sawGeneration } = await toolsSince(since);
+    const response = extractReply(conv.out);
+    if (response) console.log(response.split("\n").map((l) => "    " + l).join("\n"));
+    if (!conv.ok) { results.push({ id: s.id, section, prompt, response, models: [], expected: s.expectedTools, forbidden: [], fired: [], status: "error", reason: conv.reason }); writeResults(); console.log(); continue; }
+    const ts = since === null ? null : await toolsSince(since).then((v) => v, () => null);
+    const tools = ts?.tools ?? [];
+    const models = ts?.models ?? [];
+    const sawGeneration = ts?.sawGeneration ?? false;
+    const lfFailed = since === null || ts === null;
     const fired = [...new Set(tools)];
-    const status: Status = !sawGeneration ? "error" : s.expectedTools.every((e) => matched(e, tools)) ? "pass" : "fail";
-    const reason = !sawGeneration ? "no trace landed in time (ingestion lag or no LLM call)" : "";
-    results.push({ id: s.id, expected: s.expectedTools, fired, status, reason });
-    console.log(`    fired: [${fired.join(", ") || "(none)"}]  → ${status === "pass" ? "✅ PASS" : status === "fail" ? "❌ FAIL" : "⚠️ ERROR"}\n`);
+    const firedForbidden = forbid.filter((f) => matched(f, tools));
+    const expectedOk = s.expectedTools.every((e) => matched(e, tools));
+    const status: Status = lfFailed || !sawGeneration ? "error" : expectedOk && firedForbidden.length === 0 ? "pass" : "fail";
+    const reason = lfFailed
+      ? "langfuse fetch failed (network) — response captured"
+      : !sawGeneration
+      ? "no trace landed in time (ingestion lag or API turn not traced)"
+      : firedForbidden.length ? `forbidden tool fired: ${firedForbidden.join(",")}` : "";
+    results.push({ id: s.id, section, prompt, response, models, expected: s.expectedTools, forbidden: firedForbidden, fired, status, reason });
+    writeResults();
+    console.log(`    model: [${models.join(", ") || "—"}]  fired: [${fired.join(", ") || "(none)"}]${firedForbidden.length ? ` forbidden:[${firedForbidden.join(",")}]` : ""}  → ${status === "pass" ? "✅ PASS" : status === "fail" ? "❌ FAIL" : "⚠️ ERROR"}\n`);
   }
 
   console.log("\n=== SUMMARY ===");
-  console.log(`${"scenario".padEnd(16)} ${"result".padEnd(7)} expected → fired`);
+  console.log(`${"scenario".padEnd(8)} ${"result".padEnd(7)} ${"model".padEnd(22)} expected → fired`);
   for (const r of results) {
     const tag = r.status === "pass" ? "PASS" : r.status === "fail" ? "FAIL" : "ERROR";
-    console.log(`${r.id.padEnd(16)} ${tag.padEnd(7)} [${r.expected.join(",")}] → [${r.fired.join(",") || "—"}]${r.reason ? `  (${r.reason})` : ""}`);
+    console.log(`${r.id.padEnd(8)} ${tag.padEnd(7)} ${(r.models.join(",") || "—").padEnd(22)} [${r.expected.join(",")}] → [${r.fired.join(",") || "—"}]${r.reason ? `  (${r.reason})` : ""}`);
   }
   const pass = results.filter((r) => r.status === "pass").length;
   const fail = results.filter((r) => r.status === "fail").length;
   const err = results.filter((r) => r.status === "error").length;
   console.log(`\n${pass} pass · ${fail} fail · ${err} error  (of ${results.length}).`);
+  writeFileSync(RESULTS_OUT, JSON.stringify(results, null, 2));
+  console.log(`Results written to ${RESULTS_OUT}`);
   process.exit(err > 0 ? 2 : fail > 0 ? 1 : 0);
 }
 

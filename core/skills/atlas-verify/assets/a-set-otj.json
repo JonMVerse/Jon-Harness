@@ -1,0 +1,7 @@
+[
+  { "id": "A1", "messages": ["What counts as off-the-job training?"], "expectedTools": ["intercom_search"] },
+  { "id": "A2", "messages": ["How do I log my OTJ hours?"], "expectedTools": ["intercom_search"] },
+  { "id": "A3", "messages": ["Does reading articles in my own time count towards OTJ?"], "expectedTools": ["intercom_search"] },
+  { "id": "A4", "messages": ["How many OTJ hours am I supposed to do?"], "expectedTools": ["intercom_search"] },
+  { "id": "A5", "messages": ["Can I count a work meeting as off-the-job?"], "expectedTools": ["intercom_search"] }
+]
