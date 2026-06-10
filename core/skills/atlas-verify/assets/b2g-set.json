@@ -1,0 +1,41 @@
+[
+  { "id": "B1", "section": "B. Platform & navigation", "messages": ["Where do I find my projects?"], "expectedTools": ["intercom_search"] },
+  { "id": "B2", "section": "B. Platform & navigation", "messages": ["How do I get to my learning content?"], "expectedTools": ["intercom_search"] },
+  { "id": "B3", "section": "B. Platform & navigation", "messages": ["Where can I see my upcoming sessions?"], "expectedTools": ["intercom_search"] },
+  { "id": "B4", "section": "B. Platform & navigation", "messages": ["I can't find the portfolio section - where is it?"], "expectedTools": ["intercom_search"] },
+  { "id": "B5", "section": "B. Platform & navigation", "messages": ["How do I download a resource from a unit?"], "expectedTools": ["intercom_search"] },
+  { "id": "B6", "section": "B. Platform & navigation", "messages": ["Where do I see feedback from my coach?"], "expectedTools": ["intercom_search"] },
+
+  { "id": "C1", "section": "C. Account, profile & admin", "messages": ["How do I change my email address?"], "expectedTools": ["intercom_search"] },
+  { "id": "C2", "section": "C. Account, profile & admin", "messages": ["The name on my account is spelt wrong - how do I fix it?"], "expectedTools": ["intercom_search"] },
+  { "id": "C3", "section": "C. Account, profile & admin", "messages": ["How do I update my job title?"], "expectedTools": ["intercom_search"] },
+  { "id": "C4", "section": "C. Account, profile & admin", "messages": ["How do I change my notification settings?"], "expectedTools": ["intercom_search"] },
+  { "id": "C5", "section": "C. Account, profile & admin", "messages": ["How do I reset my password?"], "expectedTools": ["intercom_search"] },
+
+  { "id": "D1", "section": "D. Assessment & progression logistics", "messages": ["When do I do my EPA?"], "expectedTools": ["intercom_search"] },
+  { "id": "D2", "section": "D. Assessment & progression logistics", "messages": ["What happens at Gateway?"], "expectedTools": ["intercom_search"] },
+  { "id": "D3", "section": "D. Assessment & progression logistics", "messages": ["What do I need to submit before my Gateway meeting?"], "expectedTools": ["intercom_search"] },
+  { "id": "D4", "section": "D. Assessment & progression logistics", "messages": ["How long is the portfolio meant to be?"], "expectedTools": ["intercom_search"] },
+  { "id": "D5", "section": "D. Assessment & progression logistics", "messages": ["What's the word count for my project submission?"], "expectedTools": ["intercom_search"] },
+  { "id": "D6", "section": "D. Assessment & progression logistics", "messages": ["When will I get my functional skills results?"], "expectedTools": ["intercom_search"] },
+  { "id": "D7", "section": "D. Assessment & progression logistics", "messages": ["How do I get my certificate once I've finished?"], "expectedTools": ["intercom_search"] },
+  { "id": "D8", "section": "D. Assessment & progression logistics", "messages": ["What's the difference between a module project and my work-based project?"], "expectedTools": ["intercom_search"] },
+
+  { "id": "E1", "section": "E. Live sessions & recordings", "messages": ["My live session link isn't working - what do I do?"], "expectedTools": ["intercom_search"] },
+  { "id": "E2", "section": "E. Live sessions & recordings", "messages": ["Where do I find the recording of last week's session?"], "expectedTools": ["intercom_search"] },
+  { "id": "E3", "section": "E. Live sessions & recordings", "messages": ["How do I join my session on Zoom?"], "expectedTools": ["intercom_search"] },
+  { "id": "E4", "section": "E. Live sessions & recordings", "messages": ["I missed a live session, where can I catch up?"], "expectedTools": ["intercom_search"] },
+
+  { "id": "F1", "section": "F. Programme logistics & policy", "messages": ["How do I take a break in learning?"], "expectedTools": ["intercom_search"] },
+  { "id": "F2", "section": "F. Programme logistics & policy", "messages": ["What happens if I go on holiday during my programme?"], "expectedTools": ["intercom_search"] },
+  { "id": "F3", "section": "F. Programme logistics & policy", "messages": ["Can I change my coach?"], "expectedTools": ["intercom_search"] },
+  { "id": "F4", "section": "F. Programme logistics & policy", "messages": ["How do I unsubscribe from the weekly emails?"], "expectedTools": ["intercom_search"] },
+  { "id": "F5", "section": "F. Programme logistics & policy", "messages": ["What's the policy on extending a deadline?"], "expectedTools": ["intercom_search"] },
+
+  { "id": "G1", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["I can't access my account at all - it says my login is invalid."], "expectedTools": [], "forbidTools": ["intercom_search"] },
+  { "id": "G2", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["I haven't received the email with my session details."], "expectedTools": [], "forbidTools": ["intercom_search"] },
+  { "id": "G3", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["There's an error message every time I open my project."], "expectedTools": [], "forbidTools": ["intercom_search"] },
+  { "id": "G4", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["I think some of my submitted work has disappeared."], "expectedTools": [], "forbidTools": ["intercom_search"] },
+  { "id": "G5", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["I tried clearing my cache and it still won't load - I've already tried everything."], "expectedTools": [], "forbidTools": ["intercom_search"] },
+  { "id": "G6", "section": "G. Escalate to support bot (no intercom_search)", "messages": ["I want to delete my personal data from the platform."], "expectedTools": [], "forbidTools": ["intercom_search"] }
+]
