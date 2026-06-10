@@ -6,6 +6,20 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.0] — 2026-06-10
+- **New skill `security-review`** — pulled in from upstream `multiverse-io/ai-toolkit`
+  `harness-core` (the live successor to the now-archived `mv-claude-harness`). Reference
+  library for the `security-reviewer` agent: vulnerability patterns + code examples, severity
+  classification, report/PR-review templates. Closes a dangling reference — `security-reviewer.md`
+  already said "see skill: `security-review`" but the skill didn't exist in this fork.
+  Plugin-name refs rewritten `harness-core` → `core` to match this fork (per the
+  port-stripping rule). Registered in `plugin.json` skills array.
+- `wt-merge`: adopted upstream's more robust worktree detection — match `pwd` against the
+  first `git worktree list` entry instead of the brittle branch-name heuristic
+  (`worktree-*`/not-`main`), so detection no longer breaks on non-standard branch names.
+- **Re-pointed `upstream` remote** to `multiverse-io/ai-toolkit` (was the archived
+  `Multiverse-io/mv-claude-harness`).
+
 ## [3.7.2] — 2026-06-10
 - `linear-em-dashboard`: renamed "ticket lifespan" → "in-progress time" throughout the
   dashboard template (KPI card, lifespan-trend chart subtitle/dataset label, cycle-summary

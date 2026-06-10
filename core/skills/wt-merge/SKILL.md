@@ -36,13 +36,13 @@ From the context above, extract these variables:
 | `{NUMBER}` | PR number (from `gh pr view` or `gh pr list --head {BRANCH}`) |
 | `{INVOKED_FROM}` | Either `"worktree"` or `"main"` — where the session is running |
 
-**If current branch is `worktree-*` or not `main`** (inside a feature worktree):
+**If `pwd` does NOT match the path of the first `git worktree list` entry** (inside a linked worktree):
 - `{INVOKED_FROM}` = `"worktree"`
 - `{WORKTREE_PATH}` = current directory
 - `{BRANCH}` = current branch
 - `{MAIN_WORKTREE}` = first entry from worktree list
 
-**If current branch is `main`** (in the main worktree):
+**If `pwd` matches the path of the first `git worktree list` entry** (in the main worktree):
 - `{INVOKED_FROM}` = `"main"`
 - `{MAIN_WORKTREE}` = current directory
 - List all non-main worktrees
