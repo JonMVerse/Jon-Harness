@@ -6,6 +6,15 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.7.2] — 2026-06-10
+- `linear-em-dashboard`: renamed "ticket lifespan" → "in-progress time" throughout the
+  dashboard template (KPI card, lifespan-trend chart subtitle/dataset label, cycle-summary
+  header) to match the estimation-accuracy definition (start → done); tickets without a
+  start date are now explicitly noted as excluded. Added a **Weekly Throughput & Estimation
+  Accuracy** card (last 12 weeks) with an estimate-vs-days-to-resolve scatter and a clickable
+  custom tooltip. Outlier cap aligned to 365d (was 90d) to match `resolDays`. No logic change
+  to the existing computation (already used `startedAt → completedAt`). (commit `0eb1bc3`.)
+
 ## [3.7.1] — 2026-06-10
 - `atlas-verify`: hardened the Phase-1 **test-plan runner** (`run-test-plan.ts`) — per-turn
   served-model capture (parsed from the GENERATION name), `forbidTools` plus
