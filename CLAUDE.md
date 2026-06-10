@@ -24,7 +24,9 @@ See `README.md` for the marketplace overview, `core/README.md` for the workflow 
 ## Versioning
 
 - Bump the plugin's own `<plugin>/.claude-plugin/plugin.json` `version` for changes scoped to that plugin.
-- Bump `.claude-plugin/marketplace.json` `version` for suite-level changes (adding/removing a plugin, cross-plugin restructuring).
+- **`marketplace.json` mirrors each plugin's version** in its `plugins[]` array — when you bump a `<plugin>/.claude-plugin/plugin.json` `version`, bump the matching `plugins[].version` in `.claude-plugin/marketplace.json` too. These two are the same fact in two files; let them drift and the marketplace advertises a stale version. (This is separate from the suite-level `marketplace.json` `version` below.)
+- Bump `.claude-plugin/marketplace.json` `version` (the top-level suite version) for suite-level changes (adding/removing a plugin, cross-plugin restructuring).
+- Add a dated entry to `CHANGELOG.md` (tracks the `core` plugin version) for any `core` change.
 
 ## What this repo is not
 
