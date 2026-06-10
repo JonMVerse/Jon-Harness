@@ -6,6 +6,26 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.7.1] — 2026-06-10
+- `atlas-verify`: hardened the Phase-1 **test-plan runner** (`run-test-plan.ts`) — per-turn
+  served-model capture (parsed from the GENERATION name), `forbidTools` plus
+  `section`/`prompt`/`response` scenario fields (§G-style inverse rules **pass** when a
+  forbidden tool does *not* fire), degrade-don't-crash on transient Langfuse blips
+  (`lfFetch` 6× retry, `fetchObs` throws instead of `process.exit`, per-scenario `error`
+  fallback that still captures the reply), incremental `RESULTS_OUT` writes so a mid-run
+  abort loses nothing, and env-tunable `INGEST_TIMEOUT_MS`. Added scenario sets
+  `a-set-otj.json`, `b2g-set.json`, `b2g-cont.json`. (PR #6 PoC + #8 hardening.)
+- **Repo-level `templates/`** (reference content, no plugin code): `ai-feature-test-plan.md`
+  — reusable AI-feature test-plan, shipped with the `converse-atlas` execution-design doc
+  under `atlas-verify/docs/` (PR #5); `rfc.md` — lightweight decision-oriented RFC template
+  (PR #7).
+- README: recommends the official code-quality plugins (`code-review`, `code-simplifier`,
+  `code-modernization`, `pr-review-toolkit`) as user-scope **Review-phase companions**
+  rather than bundling them — bundling would fork code we don't own.
+- **Maintenance:** retired the now-archived read-only `upstream` remote (all post-fork
+  upstream commits verified already in `main`); synced the embedded `core` version in
+  `marketplace.json` to match the plugin manifest (3.7.1).
+
 ## [3.7.0] — 2026-06-04
 Synced with upstream `Multiverse-io/mv-claude-harness` (core v2.9.1). Custom skills
 (`atlas-*`, `langfuse-query`, `linear-em-dashboard`, `mv-slides`, `onboarding-clone`) and

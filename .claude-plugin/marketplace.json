@@ -8,7 +8,7 @@
     "plugins": [
         {
             "name": "core",
-            "version": "3.7.0",
+            "version": "3.7.1",
             "source": "./core",
             "description": "Core plugins for working with Claude Code"
         },
