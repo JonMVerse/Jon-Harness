@@ -6,6 +6,14 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.1] — 2026-06-10
+- `linear-em-dashboard`: completed the "lifespan" → "in-progress time" rename started in
+  `0eb1bc3` — now consistent across all user-facing surfaces (SKILL.md description/trigger
+  text, metrics table, artifact description, data notes; dashboard header subtitle and the
+  "Ticket Lifespan Trend" → "In-Progress Time Trend" card title). Internal code identifiers
+  (`cLifespan` canvas id, `lifespans`/`medLife` vars) deliberately kept to avoid breaking the
+  canvas-id linkage. No logic change.
+
 ## [3.8.0] — 2026-06-10
 - **New skill `security-review`** — pulled in from upstream `multiverse-io/ai-toolkit`
   `harness-core` (the live successor to the now-archived `mv-claude-harness`). Reference
