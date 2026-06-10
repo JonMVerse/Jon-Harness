@@ -357,20 +357,31 @@ async function loadDashboard(teamId, teamName) {
       loadWeeklyData(teamName),
     ]);
 
-    // 3. Extract org slug + team key from sample issue data at runtime.
-    //    list_teams doesn't return a key field, so we derive it from issue ids
-    //    (e.g. "ATLAS-3672" → "ATLAS") and issue URLs (e.g. "https://linear.app/multiverse-io/...")
+    // 3. Extract org slug + team key from issue URLs at runtime.
+    //    list_teams doesn't return a key field, so we derive both from the issue URL
+    //    (e.g. "https://linear.app/multiverse-io/issue/ATLAS-3672/…"): the org slug is
+    //    the first path segment and the team key is the prefix of the issue identifier
+    //    in the URL — more reliable than the issue `id`, which is a UUID. Fall back to
+    //    `identifier`/`id` if the URL doesn't carry it. Scan every issue source (cycle
+    //    results AND weekly issues) so teams without cycles still resolve their links.
     let orgSlug = '';
     let teamKey = '';
-    for (const { issues } of results) {
-      const sample = issues.find(i => i.url && i.url.includes('linear.app'));
-      if (sample) {
-        const urlMatch = sample.url.match(/linear\.app\/([^/]+)\//);
-        if (urlMatch) orgSlug = urlMatch[1];
-        const idMatch = (sample.id || '').match(/^([A-Z]+)-\d+$/);
-        if (idMatch) teamKey = idMatch[1];
-        if (orgSlug && teamKey) break;
+    const linkPool = [...results.flatMap(r => r.issues), ...weeklyIssues];
+    for (const i of linkPool) {
+      if (!i || !i.url || !i.url.includes('linear.app')) continue;
+      if (!orgSlug) {
+        const m = i.url.match(/linear\.app\/([^/]+)\//);
+        if (m) orgSlug = m[1];
       }
+      if (!teamKey) {
+        const um = i.url.match(/\/issue\/([A-Z0-9]+)-\d+/);
+        if (um) teamKey = um[1];
+        else {
+          const im = (i.identifier || i.id || '').match(/^([A-Z0-9]+)-\d+$/);
+          if (im) teamKey = im[1];
+        }
+      }
+      if (orgSlug && teamKey) break;
     }
 
     // 4. Compute metrics
@@ -647,8 +658,10 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => { tip.style.display = 'none'; }, 2000);
       };
-      tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-      tip.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      // Property assignment (not addEventListener) so repeated renders / team switches
+      // replace these handlers rather than stacking duplicates on #scatterTip.
+      tip.onmouseenter = () => clearTimeout(hideTimer);
+      tip.onmouseleave = () => { tip.style.display = 'none'; };
 
       allCharts.push(new Chart(estimateCanvas, {
         type: 'scatter',

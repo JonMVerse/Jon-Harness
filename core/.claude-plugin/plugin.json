@@ -1,7 +1,7 @@
 {
     "name": "core",
     "description": "Core utils for working with Claude Code - agents, commands, skills, and workflow automation",
-    "version": "3.8.2",
+    "version": "3.8.3",
     "author": {
         "name": "Multiverse"
     },

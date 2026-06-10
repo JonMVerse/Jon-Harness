@@ -6,6 +6,17 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.3] — 2026-06-10
+- `linear-em-dashboard`: fixed 3 follow-on issues from Bugbot's re-scan of ai-toolkit PR #5:
+  - **High/Med** — deep-link metadata: `teamKey` is now parsed from the issue **URL** path
+    (`/issue/ATLAS-1234/…`) rather than the issue `id` (a UUID, so it never matched), with a
+    fallback to `identifier`/`id`. Extraction now scans **all** issue sources (cycle results
+    **and** `weeklyIssues`), so no-cycle teams resolve their triage/cycle deep links too.
+  - **Low** — scatter tooltip handlers on `#scatterTip` now use `.onmouseenter`/`.onmouseleave`
+    property assignment instead of `addEventListener`, so renders/team switches replace rather
+    than stack them.
+  - Note: link resolution still warrants a runtime check against the real Linear MCP response shape.
+
 ## [3.8.2] — 2026-06-10
 - `linear-em-dashboard`: fixed 4 issues found by Cursor Bugbot on ai-toolkit PR #5
   (all in `dashboard-template.html`):
