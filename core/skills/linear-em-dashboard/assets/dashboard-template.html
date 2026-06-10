@@ -334,13 +334,12 @@ async function loadDashboard(teamId, teamName) {
       .sort((a,b) => a.number - b.number)
       .slice(-MAX_CYCLES);
 
-    if (!cycles.length) {
-      document.getElementById('loadingState').innerHTML =
-        '<div class="empty">No cycle history found for <strong>' + teamName + '</strong>.<br>This team may not use cycles, or cycles have no data yet.</div>';
-      return;
-    }
-
-    setMsg('Loading issues for ' + cycles.length + ' cycles…');
+    // No cycles (e.g. teams that don't use sprints): don't bail out — triage
+    // KPIs and the 12-week weekly throughput table still load and render below.
+    // Cycle-based panels degrade to an empty/"—" state (see render()).
+    setMsg(cycles.length
+      ? 'Loading issues for ' + cycles.length + ' cycles…'
+      : 'No cycles for ' + teamName + ' — loading triage & weekly metrics…');
 
     // 2. Issues per cycle + triage snapshot + weekly data (parallel)
     const [results, triageData, weeklyIssues] = await Promise.all([
@@ -373,7 +372,6 @@ async function loadDashboard(teamId, teamName) {
         if (orgSlug && teamKey) break;
       }
     }
-    console.log('[EM Dashboard] extracted — orgSlug:', orgSlug, ' teamKey:', teamKey);
 
     // 4. Compute metrics
     const metrics = results.map(({ cycle, issues }) => {
@@ -442,15 +440,21 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
   const lastDone = [...metrics].reverse().find(m => !m.isCurrent) || last;
   const prevDone = lastDone ? metrics[metrics.indexOf(lastDone) - 1] : null;
 
-  // KPIs
-  document.getElementById('kpiVel').textContent    = last.velocityCount;
-  document.getElementById('kpiVelD').innerHTML     = deltaBadge(last.velocityCount, prev?.velocityCount, false);
-  document.getElementById('kpiLife').textContent   = last.medLife !== null ? fmt1(last.medLife)+'d' : '—';
-  document.getElementById('kpiLifeD').innerHTML    = deltaBadge(last.medLife, prev?.medLife, true);
-  document.getElementById('kpiCo').textContent     = lastDone.carryoverRate.toFixed(0)+'%';
-  document.getElementById('kpiCoD').innerHTML      = deltaBadge(lastDone.carryoverRate, prevDone?.carryoverRate, true);
-  document.getElementById('kpiContrib').textContent= last.contributors;
-  document.getElementById('kpiContribD').innerHTML  = deltaBadge(last.contributors, prev?.contributors, false);
+  // KPIs (cycle-based) — only when this team has cycle data; otherwise show "—"
+  // so no-cycle teams still get a coherent dashboard (triage + weekly below).
+  if (metrics.length) {
+    document.getElementById('kpiVel').textContent    = last.velocityCount;
+    document.getElementById('kpiVelD').innerHTML     = deltaBadge(last.velocityCount, prev?.velocityCount, false);
+    document.getElementById('kpiLife').textContent   = last.medLife !== null ? fmt1(last.medLife)+'d' : '—';
+    document.getElementById('kpiLifeD').innerHTML    = deltaBadge(last.medLife, prev?.medLife, true);
+    document.getElementById('kpiCo').textContent     = lastDone.carryoverRate.toFixed(0)+'%';
+    document.getElementById('kpiCoD').innerHTML      = deltaBadge(lastDone.carryoverRate, prevDone?.carryoverRate, true);
+    document.getElementById('kpiContrib').textContent= last.contributors;
+    document.getElementById('kpiContribD').innerHTML  = deltaBadge(last.contributors, prev?.contributors, false);
+  } else {
+    ['kpiVel','kpiLife','kpiCo','kpiContrib'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    ['kpiVelD','kpiLifeD','kpiCoD','kpiContribD'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+  }
 
   // Triage KPIs
   const { triageNow, resolved30d } = triageData;
@@ -464,22 +468,24 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
     : 'could not load resolved data';
 
   // Link triage KPI cards to Linear views (if we could resolve the org slug)
-  console.log('[EM Dashboard] render — orgSlug:', orgSlug, ' teamKey:', teamKey);
   if (orgSlug && teamKey) {
     const base = `https://linear.app/${orgSlug}/team/${teamKey}`;
-    console.log('[EM Dashboard] Linear base URL:', base);
 
     function addCardLink(cardId, href, label) {
       const card = document.getElementById(cardId);
       if (!card) return;
       card.classList.add('kpi-card-link');
       card.style.position = 'relative';
+      // Remove any overlay left by a previous render (e.g. team switch) so the
+      // links don't stack and leave stale URLs pointing at the prior team.
+      card.querySelectorAll(':scope > a[data-card-link]').forEach(el => el.remove());
       // Absolutely-positioned <a> covering the whole card — more reliable than onclick+window.open in sandboxed iframes
       const a = document.createElement('a');
       a.href = href;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       a.title = label;
+      a.dataset.cardLink = '1';
       a.style.cssText = 'position:absolute;inset:0;border-radius:inherit;z-index:2;';
       card.appendChild(a);
     }
@@ -572,6 +578,9 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
   // ── Weekly Throughput & Estimation Accuracy ──────────────────────────────
   const weeklyWrap = document.getElementById('weeklyTableWrap');
   const weeklyScatterWrap = document.getElementById('weeklyScatterWrap');
+  // Reset each render — only re-shown below when this load has ≥5 estimated
+  // tickets. Prevents a stale/empty scatter lingering after a team switch.
+  weeklyScatterWrap.style.display = 'none';
 
   if (!weeklyIssues.length) {
     weeklyWrap.innerHTML = '<div class="empty">No completed issues found in the last 12 weeks.</div>';
@@ -717,7 +726,6 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
   // Cycle summary
   let sHtml = '<table><thead><tr><th>Cycle</th><th>Completed</th><th>Pts</th><th>Ticket Types</th><th>Carry-over</th><th>Med. In-Progress</th><th>Scope Added</th><th>Contributors</th></tr></thead><tbody>';
   const cycleBase = (orgSlug && teamKey) ? `https://linear.app/${orgSlug}/team/${teamKey}/cycles` : null;
-  console.log('[EM Dashboard] cycleBase:', cycleBase);
   [...metrics].reverse().forEach(m => {
     const coClass = m.carryoverRate>40?'b-red':m.carryoverRate>20?'b-orange':'b-green';
 

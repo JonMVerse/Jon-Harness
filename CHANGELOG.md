@@ -6,6 +6,21 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.2] — 2026-06-10
+- `linear-em-dashboard`: fixed 4 issues found by Cursor Bugbot on ai-toolkit PR #5
+  (all in `dashboard-template.html`):
+  - **High** — no-cycle teams lost the dashboard: `loadDashboard` returned early when a
+    team had no cycles with `issueCountHistory`, *before* triage + weekly data loaded, so
+    teams that don't use cycles (the weekly view's whole audience) saw only an empty state.
+    Now it no longer bails — triage KPIs + the 12-week table render, and the cycle-based
+    KPIs/charts degrade to "—"/empty. `render()` guards the cycle-KPI block against empty metrics.
+  - **Med** — triage KPI card links stacked on team switch (`addCardLink` appended a new
+    overlay `<a>` each render); now removes any prior overlay first (`data-card-link`).
+  - **Med** — estimation scatter could stay visible with a stale/empty canvas after a switch
+    to a team with <5 estimated tickets; `weeklyScatterWrap` is now reset to hidden each render.
+  - **Low** — removed 4 debug `console.log` calls from the load/render path.
+  - Note: the no-cycle refactor (High) needs a runtime check against a real no-cycle Linear team.
+
 ## [3.8.1] — 2026-06-10
 - `linear-em-dashboard`: completed the "lifespan" → "in-progress time" rename started in
   `0eb1bc3` — now consistent across all user-facing surfaces (SKILL.md description/trigger
