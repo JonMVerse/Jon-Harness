@@ -96,3 +96,15 @@ Let them know the dashboard is live. Mention:
 - **In-progress time**: uses `startedAt → completedAt`; issues without `startedAt` excluded from median
 - **Story points**: Linear's `estimate.value` field
 - **Team list**: fetches up to 250 teams; covers all typical workspace sizes
+
+## Known limitations
+
+- **Carry-over reflects *current* completion state, not end-of-cycle state.** A ticket that
+  rolled over a closed cycle but has since been completed counts as done now, so historical
+  carry-over rates (and the "last cycle" KPI) understate the real end-of-cycle rollover.
+  Faithful historical carry-over would need per-issue cycle-end state, which the current
+  Linear data pull doesn't expose.
+- **Weekly throughput, the estimation scatter, and the 30-day completed KPI fetch a single
+  `list_issues` page (`limit: 250`).** A team completing more than 250 issues in the window is
+  silently undercounted. Treat these as directional for very high-volume teams until pagination
+  is added.

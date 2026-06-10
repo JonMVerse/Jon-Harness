@@ -151,6 +151,10 @@ const MAX_CYCLES = 8;
 
 // ─── State ────────────────────────────────────────────────────────────────
 let allCharts = [];
+// Monotonic token to guard against overlapping team loads: each loadDashboard
+// call claims the next token; a slower earlier load whose token is now stale
+// bails before rendering, so the last team selected always wins.
+let loadToken = 0;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 function unwrap(v) {
@@ -315,6 +319,7 @@ async function onTeamChange() {
 
 // ─── Main data load ────────────────────────────────────────────────────────
 async function loadDashboard(teamId, teamName) {
+  const myToken = ++loadToken;   // claim this load; a newer load supersedes it
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('loadingState').style.display = 'flex';
   document.getElementById('loadingState').innerHTML =
@@ -430,6 +435,10 @@ async function loadDashboard(teamId, teamName) {
         byAssignee, contributors, labelCounts,
       };
     });
+
+    // A newer team selection started while we were awaiting MCP calls — drop this
+    // stale result so it can't render the wrong team's data over the current one.
+    if (myToken !== loadToken) return;
 
     render(metrics, teamName, triageData, { orgSlug, teamKey }, weeklyIssues);
 

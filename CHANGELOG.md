@@ -6,6 +6,20 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.4] — 2026-06-10
+- `linear-em-dashboard`: addressed the Bugbot re-scan of ai-toolkit PR #5 (not yet pushed to
+  the PR — batching with desktop testing to avoid a fix/rescan ping-pong):
+  - **Fixed (Med)** — overlapping team-load race: `loadDashboard` now claims a monotonic
+    `loadToken`; a slower earlier load whose token is stale bails before `render()`, so the
+    last-selected team always wins.
+  - **Documented as known limitations** (SKILL.md "Known limitations") rather than fixed —
+    both are pre-existing v1 tradeoffs for reviewers to weigh: (a) carry-over reflects
+    *current* completion state, not end-of-cycle state (understates historical rollover);
+    (b) weekly/30-day metrics fetch a single `list_issues` page (`limit:250`), so >250-issue
+    windows are silently undercounted.
+  - **Runtime-verified:** the no-cycle-team dashboard (3.8.2 fix) confirmed working in the
+    desktop app on a real non-cycle team.
+
 ## [3.8.3] — 2026-06-10
 - `linear-em-dashboard`: fixed 3 follow-on issues from Bugbot's re-scan of ai-toolkit PR #5:
   - **High/Med** — deep-link metadata: `teamKey` is now parsed from the issue **URL** path
