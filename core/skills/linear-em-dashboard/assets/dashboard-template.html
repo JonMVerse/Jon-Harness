@@ -113,7 +113,7 @@
   <div id="dashboard" style="display:none">
     <div class="kpi-row">
       <div class="kpi-card"><div class="kpi-label">Velocity — current cycle</div><div class="kpi-value" id="kpiVel">—</div><div class="kpi-delta" id="kpiVelD"></div></div>
-      <div class="kpi-card"><div class="kpi-label">Median Ticket Lifespan</div><div class="kpi-value" id="kpiLife">—</div><div class="kpi-delta" id="kpiLifeD"></div></div>
+      <div class="kpi-card"><div class="kpi-label">Median In-Progress Time</div><div class="kpi-value" id="kpiLife">—</div><div class="kpi-delta" id="kpiLifeD"></div></div>
       <div class="kpi-card"><div class="kpi-label">Carry-over Rate (last cycle)</div><div class="kpi-value" id="kpiCo">—</div><div class="kpi-delta" id="kpiCoD"></div></div>
       <div class="kpi-card"><div class="kpi-label">Active Contributors</div><div class="kpi-value" id="kpiContrib">—</div><div class="kpi-delta" id="kpiContribD"></div></div>
     </div>
@@ -123,11 +123,19 @@
     </div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Velocity per Cycle</div><div class="card-sub">Completed issues (bars) · Story points (line)</div><div class="chart-wrap"><canvas id="cVelocity"></canvas></div></div>
-      <div class="card"><div class="card-title">Ticket Lifespan Trend</div><div class="card-sub">Median days from first start → completion (completed issues only)</div><div class="chart-wrap"><canvas id="cLifespan"></canvas></div></div>
+      <div class="card"><div class="card-title">Ticket Lifespan Trend</div><div class="card-sub">Median days in-progress (start → done) · tickets without a start date excluded</div><div class="chart-wrap"><canvas id="cLifespan"></canvas></div></div>
     </div>
     <div class="grid-2">
       <div class="card"><div class="card-title">Carry-over Rate</div><div class="card-sub">% of cycle issues not completed by end (excl. cancelled)</div><div class="chart-wrap"><canvas id="cCarryover"></canvas></div></div>
       <div class="card"><div class="card-title">Scope Growth per Cycle</div><div class="card-sub">Issues at cycle start vs. added mid-cycle</div><div class="chart-wrap"><canvas id="cScope"></canvas></div></div>
+    </div>
+    <div class="grid-1"><div class="card"><div class="card-title">Weekly Throughput &amp; Estimation Accuracy</div><div class="card-sub" id="weeklyCardSub">Last 12 weeks · days = in-progress → done only (tickets not yet started are excluded from time metrics)</div><div id="weeklyTableWrap"></div><div id="weeklyScatterWrap" style="display:none;margin-top:16px"><div class="card-title" style="font-size:12px;margin-bottom:4px">Estimate (pts) vs Days to Resolve</div><div class="card-sub" style="margin-bottom:10px">Each dot is a completed ticket with an estimate set — time measured from in-progress → done · last 12 weeks · hover a dot then click <strong>Open in Linear</strong></div><div class="chart-wrap"><canvas id="cEstimate"></canvas></div></div></div></div>
+    <!-- Custom HTML scatter tooltip — uses a real <a> so the link is clickable in any iframe context -->
+    <div id="scatterTip" style="display:none;position:fixed;background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.12);font-size:12px;max-width:300px;z-index:9999;pointer-events:auto;line-height:1.5">
+      <div id="scatterTipId" style="font-weight:700;color:#5e6ad2;font-size:11px;margin-bottom:3px"></div>
+      <div id="scatterTipTitle" style="color:#1d1d1f;margin-bottom:2px"></div>
+      <div id="scatterTipMeta" style="color:#86868b;font-size:11px;margin-bottom:8px"></div>
+      <a id="scatterTipLink" href="#" target="_blank" rel="noopener noreferrer" style="color:#5e6ad2;font-weight:600;text-decoration:none;border-bottom:1px solid currentColor">Open in Linear ↗</a>
     </div>
     <div class="grid-1"><div class="card"><div class="card-title">Throughput by Assignee</div><div class="card-sub">Completed issues per person across the last 6 cycles</div><div id="assigneeTableWrap"></div></div></div>
     <div class="grid-1"><div class="card"><div class="card-title">Cycle Summary</div><div class="card-sub">All metrics at a glance, newest first</div><div id="cycleSummaryWrap"></div></div></div>
@@ -190,6 +198,26 @@ function destroyCharts() {
   allCharts = [];
 }
 
+// ─── Weekly / estimation helpers ─────────────────────────────────────────
+function weekMonday(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0=Sun
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const m = new Date(d);
+  m.setDate(diff); m.setHours(0, 0, 0, 0);
+  return m.getTime();
+}
+function weekLabel(ts) {
+  return 'w/c ' + new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+function resolDays(issue) {
+  // Only measure from when work actually started (in-progress → done).
+  // Deliberately excludes createdAt so pre-grooming/backlog wait time is not counted.
+  if (!issue.startedAt || !issue.completedAt) return null;
+  const d = (new Date(issue.completedAt) - new Date(issue.startedAt)) / 86400000;
+  return (d >= 0 && d < 365) ? d : null;
+}
+
 // ─── Triage data ──────────────────────────────────────────────────────────
 async function loadTriageData(teamName) {
   try {
@@ -218,6 +246,20 @@ async function loadTriageData(teamName) {
   } catch(_) {
     return { triageNow: null, resolved30d: null };
   }
+}
+
+// ─── Weekly throughput + estimation data ─────────────────────────────────
+async function loadWeeklyData(teamName) {
+  try {
+    const cutoff = new Date(Date.now() - 84 * 86400000).toISOString(); // 12 weeks
+    const raw = unwrap(await window.cowork.callMcpTool(
+      MCP + '__list_issues',
+      { team: teamName, state: 'completed', updatedAt: cutoff, limit: 250, includeArchived: true }
+    ));
+    const issues = Array.isArray(raw) ? raw : (raw.issues || []);
+    const cutoffMs = Date.now() - 84 * 86400000;
+    return issues.filter(i => i.completedAt && new Date(i.completedAt).getTime() >= cutoffMs);
+  } catch (_) { return []; }
 }
 
 // ─── Boot: load teams ──────────────────────────────────────────────────────
@@ -300,8 +342,8 @@ async function loadDashboard(teamId, teamName) {
 
     setMsg('Loading issues for ' + cycles.length + ' cycles…');
 
-    // 2. Issues per cycle + triage snapshot (parallel)
-    const [results, triageData] = await Promise.all([
+    // 2. Issues per cycle + triage snapshot + weekly data (parallel)
+    const [results, triageData, weeklyIssues] = await Promise.all([
       Promise.all(cycles.map(async (cycle) => {
         try {
           let raw = unwrap(await window.cowork.callMcpTool(
@@ -313,6 +355,7 @@ async function loadDashboard(teamId, teamName) {
         } catch(_) { return { cycle, issues: [] }; }
       })),
       loadTriageData(teamName),
+      loadWeeklyData(teamName),
     ]);
 
     // 3. Extract org slug + team key from sample issue data at runtime.
@@ -344,7 +387,7 @@ async function loadDashboard(teamId, teamName) {
       const lifespans = done
         .filter(i => i.startedAt && i.completedAt)
         .map(i => days(i.startedAt, i.completedAt))
-        .filter(d => d >= 0 && d < 90);
+        .filter(d => d >= 0 && d < 365);
       const medLife = median(lifespans);
 
       const carryoverRate  = active.length ? incomplete.length / active.length * 100 : 0;
@@ -379,7 +422,7 @@ async function loadDashboard(teamId, teamName) {
       };
     });
 
-    render(metrics, teamName, triageData, { orgSlug, teamKey });
+    render(metrics, teamName, triageData, { orgSlug, teamKey }, weeklyIssues);
 
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
@@ -393,7 +436,7 @@ async function loadDashboard(teamId, teamName) {
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────
-function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = '' } = {}) {
+function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = '' } = {}, weeklyIssues = []) {
   const last = metrics[metrics.length - 1];
   const prev = metrics.length > 1 ? metrics[metrics.length - 2] : null;
   const lastDone = [...metrics].reverse().find(m => !m.isCurrent) || last;
@@ -480,7 +523,7 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
   // Lifespan
   allCharts.push(new Chart(document.getElementById('cLifespan'), {
     type:'line',
-    data:{ labels, datasets:[{ label:'Median lifespan (days)',
+    data:{ labels, datasets:[{ label:'Median in-progress time (days)',
       data:metrics.map(m=>m.medLife!==null?+fmt1(m.medLife):null),
       borderColor:WARN, backgroundColor:a(WARN,0.1),
       borderWidth:2.5, pointRadius:5,
@@ -526,6 +569,123 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
     }
   }));
 
+  // ── Weekly Throughput & Estimation Accuracy ──────────────────────────────
+  const weeklyWrap = document.getElementById('weeklyTableWrap');
+  const weeklyScatterWrap = document.getElementById('weeklyScatterWrap');
+
+  if (!weeklyIssues.length) {
+    weeklyWrap.innerHTML = '<div class="empty">No completed issues found in the last 12 weeks.</div>';
+  } else {
+    // Build 12 Monday-based week buckets, newest first
+    const buckets = [];
+    for (let w = 0; w < 12; w++) {
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1) - (w * 7);
+      const mon = new Date(now);
+      mon.setDate(diff); mon.setHours(0, 0, 0, 0);
+      buckets.push({ ts: mon.getTime(), label: weekLabel(mon.getTime()), issues: [] });
+    }
+    weeklyIssues.forEach(i => {
+      const wm = weekMonday(i.completedAt);
+      const b = buckets.find(b => b.ts === wm);
+      if (b) b.issues.push(i);
+    });
+
+    let wHtml = '<table><thead><tr><th>Week</th><th>Done</th><th>% Estimated</th><th>Avg Pts</th><th>Median Days (in-prog→done)</th></tr></thead><tbody>';
+    buckets.forEach(({ label, issues }) => {
+      const done = issues.length;
+      const est = issues.filter(i => i.estimate);
+      const pctEst = done > 0 ? Math.round(est.length / done * 100) : 0;
+      const avgPts = est.length > 0 ? (est.reduce((s, i) => s + i.estimate.value, 0) / est.length).toFixed(1) : null;
+      const resols = issues.map(i => resolDays(i)).filter(d => d !== null);
+      const medDays = median(resols);
+      const estCls = pctEst >= 70 ? 'up' : pctEst >= 40 ? 'neutral' : 'dim';
+      wHtml += `<tr>
+        <td style="font-weight:500;white-space:nowrap">${label}</td>
+        <td>${done > 0 ? `<span class="badge b-blue">${done}</span>` : '<span class="dim">—</span>'}</td>
+        <td>${done > 0 ? `<span class="${estCls}">${pctEst}%</span>` : '<span class="dim">—</span>'}</td>
+        <td>${avgPts !== null ? avgPts + 'pts' : '<span class="dim">—</span>'}</td>
+        <td>${medDays !== null ? fmt1(medDays) + 'd' : '<span class="dim">—</span>'}</td>
+      </tr>`;
+    });
+    wHtml += '</tbody></table>';
+    weeklyWrap.innerHTML = wHtml;
+
+    // Scatter chart: estimate pts vs days to resolve (only when ≥5 estimated tickets)
+    // Each point carries full ticket metadata for tooltip + click-through
+    const scatterData = weeklyIssues
+      .filter(i => i.estimate)
+      .map(i => ({
+        x: i.estimate.value,
+        y: resolDays(i),
+        ticketId: i.id,
+        title: i.title || '',
+        url: i.url || '',
+        assignee: i.assignee || '',
+      }))
+      .filter(p => p.y !== null);
+
+    if (scatterData.length >= 5) {
+      weeklyScatterWrap.style.display = 'block';
+      const estimateCanvas = document.getElementById('cEstimate');
+      estimateCanvas.style.cursor = 'default';
+
+      // Custom HTML tooltip — real <a> element so link works in sandboxed iframes
+      const tip = document.getElementById('scatterTip');
+      let hideTimer = null;
+      const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { tip.style.display = 'none'; }, 2000);
+      };
+      tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      tip.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+      allCharts.push(new Chart(estimateCanvas, {
+        type: 'scatter',
+        data: { datasets: [{
+          label: 'Tickets',
+          data: scatterData,
+          backgroundColor: scatterData.map(() => hex2rgba(PRI, 0.55)),
+          pointRadius: 6, pointHoverRadius: 9,
+          pointHoverBackgroundColor: PRI,
+        }]},
+        options: { ...baseOpts,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }, // replaced by custom HTML tooltip
+          },
+          onHover: (evt, elements) => {
+            estimateCanvas.style.cursor = elements.length ? 'pointer' : 'default';
+            if (!elements.length) { scheduleHide(); return; }
+            clearTimeout(hideTimer);
+            const pt = scatterData[elements[0].index];
+            document.getElementById('scatterTipId').textContent =
+              `${pt.ticketId}  ·  ${pt.x}pts → ${pt.y.toFixed(1)}d`;
+            document.getElementById('scatterTipTitle').textContent =
+              pt.title.length > 55 ? pt.title.slice(0, 55) + '…' : pt.title;
+            document.getElementById('scatterTipMeta').textContent =
+              pt.assignee ? `↳ ${pt.assignee}` : '';
+            document.getElementById('scatterTipLink').href = pt.url || '#';
+            tip.style.display = 'block';
+            const cx = evt.native.clientX + 14;
+            const cy = evt.native.clientY - 10;
+            tip.style.left = Math.min(cx, window.innerWidth - 320) + 'px';
+            tip.style.top = cy + 'px';
+          },
+          scales: {
+            x: { ...baseOpts.scales.x,
+              title: { display: true, text: 'Story Points', font: { size: 10 } },
+              ticks: { font: { size: 10 }, stepSize: 1 } },
+            y: { ...baseOpts.scales.y,
+              title: { display: true, text: 'Days (in-progress → done)', font: { size: 10 } },
+              ticks: { font: { size: 10 }, callback: v => v + 'd' } }
+          }
+        }
+      }));
+    }
+  }
+
   // Assignee table
   const recentM = metrics.slice(-6);
   const allA = new Set();
@@ -555,7 +715,7 @@ function render(metrics, teamName, triageData = {}, { orgSlug = '', teamKey = ''
   document.getElementById('assigneeTableWrap').innerHTML = tHtml;
 
   // Cycle summary
-  let sHtml = '<table><thead><tr><th>Cycle</th><th>Completed</th><th>Pts</th><th>Ticket Types</th><th>Carry-over</th><th>Med. Lifespan</th><th>Scope Added</th><th>Contributors</th></tr></thead><tbody>';
+  let sHtml = '<table><thead><tr><th>Cycle</th><th>Completed</th><th>Pts</th><th>Ticket Types</th><th>Carry-over</th><th>Med. In-Progress</th><th>Scope Added</th><th>Contributors</th></tr></thead><tbody>';
   const cycleBase = (orgSlug && teamKey) ? `https://linear.app/${orgSlug}/team/${teamKey}/cycles` : null;
   console.log('[EM Dashboard] cycleBase:', cycleBase);
   [...metrics].reverse().forEach(m => {
