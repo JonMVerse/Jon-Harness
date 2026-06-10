@@ -57,6 +57,29 @@ mode                    /a11y     │
 
 To install manually, clone the repo and copy `core/` into your Claude Code plugins directory.
 
+## Recommended companion plugins
+
+The harness ships its own `core` and `security` plugins. It does **not** bundle third-party tooling — that would fork code we don't own and lose upstream updates. Instead, these code-quality plugins from the official Anthropic marketplace pair well with the Review phase of the lifecycle, and I run them alongside the harness:
+
+```
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin install code-review@claude-plugins-official
+/plugin install code-simplifier@claude-plugins-official
+/plugin install code-modernization@claude-plugins-official
+/plugin install pr-review-toolkit@claude-plugins-official
+```
+
+| Plugin | What it adds | Account needed? |
+|--------|--------------|-----------------|
+| `code-review` | Diff review for bugs and quality | No |
+| `code-simplifier` | Refactor for reuse and simplicity | No |
+| `code-modernization` | Upgrade legacy patterns and dependencies | No |
+| `pr-review-toolkit` | PR review workflow | No |
+| `coderabbit` *(optional)* | CodeRabbit AI review | Yes — CodeRabbit account |
+| `greptile` *(optional)* | Greptile codebase review | Yes — Greptile account |
+
+These install at **user scope** (`~/.claude/plugins`), so they apply across all your projects and update via `claude plugin update`. They are a recommendation, not a dependency — the harness works without them.
+
 ## Plans as living artefacts
 
 When you enter plan mode, Claude Code writes a plan to `~/.claude/plans/<slug>.md`. The harness's `rename-plan` hook automatically mirrors it into the active project at `plans/YYYY-MM-DD-<slug>/plan.md`, with a `worklog.md` alongside.
