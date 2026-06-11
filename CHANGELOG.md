@@ -6,6 +6,14 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.5] — 2026-06-11
+- `linear-em-dashboard`: completed the team-load race guard — the `loadDashboard` **catch
+  block** now also checks `myToken !== loadToken`, so a superseded load that *fails* can't
+  paint its error over the team the user has since switched to (the success path was already
+  guarded in 3.8.4). Runtime-verified in the desktop app (rapid Atlas → no-cycle-team switching).
+- Tightened the no-cycle code comment to reflect that the path also serves teams with cycles
+  *enabled but not planned in* (e.g. Manatees), not only teams with no cycles at all.
+
 ## [3.8.4] — 2026-06-10
 - `linear-em-dashboard`: addressed the Bugbot re-scan of ai-toolkit PR #5 (not yet pushed to
   the PR — batching with desktop testing to avoid a fix/rescan ping-pong):

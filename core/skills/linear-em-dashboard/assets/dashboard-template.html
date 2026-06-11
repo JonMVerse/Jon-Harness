@@ -339,8 +339,9 @@ async function loadDashboard(teamId, teamName) {
       .sort((a,b) => a.number - b.number)
       .slice(-MAX_CYCLES);
 
-    // No cycles (e.g. teams that don't use sprints): don't bail out — triage
-    // KPIs and the 12-week weekly throughput table still load and render below.
+    // No usable cycles (teams with none, or cycles enabled but not planned in):
+    // don't bail out — triage KPIs and the 12-week weekly throughput table still
+    // load and render below.
     // Cycle-based panels degrade to an empty/"—" state (see render()).
     setMsg(cycles.length
       ? 'Loading issues for ' + cycles.length + ' cycles…'
@@ -448,6 +449,9 @@ async function loadDashboard(teamId, teamName) {
       teamName + ' · refreshed ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 
   } catch(err) {
+    // Same staleness guard as the success path: a superseded load that fails
+    // must not paint its error over the team the user has since switched to.
+    if (myToken !== loadToken) return;
     document.getElementById('loadingState').innerHTML =
       '<div class="error-box">⚠️ Failed to load data for <strong>' + teamName + '</strong>: ' + err.message + '</div>';
   }
