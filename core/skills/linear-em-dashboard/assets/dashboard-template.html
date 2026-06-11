@@ -19,6 +19,7 @@
     .last-updated { font-size: 11px; color: #aeaeb2; }
 
     /* Team picker */
+    .team-bar { padding: 10px 24px 0; display: flex; justify-content: flex-start; }
     .team-picker-wrap { display: flex; align-items: center; gap: 8px; }
     .team-label { font-size: 12px; font-weight: 600; color: #6e6e73; white-space: nowrap; }
     #teamSelect {
@@ -99,11 +100,16 @@
     </div>
   </div>
   <div class="header-right">
-    <div class="team-picker-wrap">
-      <span class="team-label">Team</span>
-      <select id="teamSelect" disabled><option>Loading teams…</option></select>
-    </div>
     <div class="last-updated" id="lastUpdated"></div>
+  </div>
+</div>
+
+<!-- Team picker on its own row, left-aligned below the header — fixed position
+     so it doesn't shift when #lastUpdated populates after a team loads. -->
+<div class="team-bar">
+  <div class="team-picker-wrap">
+    <span class="team-label">Team</span>
+    <select id="teamSelect" disabled><option>Loading teams…</option></select>
   </div>
 </div>
 

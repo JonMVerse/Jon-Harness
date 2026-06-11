@@ -6,6 +6,12 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.6] — 2026-06-11
+- `linear-em-dashboard`: team picker moved to its own row, left-aligned directly below the
+  header, in a fixed `.team-bar`. Previously it sat in `.header-right` beside `#lastUpdated`,
+  which is empty until a team loads — so the picker visibly shifted once the "refreshed …"
+  text appeared and the flex row reflowed. Now its position is stable across loading/loaded states.
+
 ## [3.8.5] — 2026-06-11
 - `linear-em-dashboard`: completed the team-load race guard — the `loadDashboard` **catch
   block** now also checks `myToken !== loadToken`, so a superseded load that *fails* can't
