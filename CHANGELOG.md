@@ -6,6 +6,12 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.7] — 2026-06-11
+- `linear-em-dashboard`: truly-empty teams (no cycles, no triage, no issues completed in the
+  last 12 weeks — e.g. Legal Team) now show a friendly "No Linear data yet" message instead of
+  a shell of empty charts and "—" KPIs. Distinct from the old no-cycle bail: a no-cycle team
+  that *has* triage or weekly data still renders the full board.
+
 ## [3.8.6] — 2026-06-11
 - `linear-em-dashboard`: team picker moved to its own row, left-aligned directly below the
   header, in a fixed `.team-bar`. Previously it sat in `.header-right` beside `#lastUpdated`,

@@ -447,6 +447,21 @@ async function loadDashboard(teamId, teamName) {
     // stale result so it can't render the wrong team's data over the current one.
     if (myToken !== loadToken) return;
 
+    // Truly-empty team (no cycles, no triage, no completed issues in the window):
+    // show a friendly message rather than a shell of empty charts. NOTE: this is
+    // NOT the old no-cycle bail — a no-cycle team WITH triage or weekly data still
+    // renders the board below.
+    const hasData = cycles.length || weeklyIssues.length
+      || triageData.triageNow || triageData.resolved30d;
+    if (!hasData) {
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loadingState').style.display = 'flex';
+      document.getElementById('loadingState').innerHTML =
+        '<div class="empty">No Linear data yet for <strong>' + teamName + '</strong>.<br>' +
+        'No cycles, triage items, or issues completed in the last 12 weeks.</div>';
+      return;
+    }
+
     render(metrics, teamName, triageData, { orgSlug, teamKey }, weeklyIssues);
 
     document.getElementById('loadingState').style.display = 'none';
