@@ -37,3 +37,4 @@ See `README.md` for the marketplace overview, `core/README.md` for the workflow 
 
 @core/CLAUDE.md
 @security/CLAUDE.md
+
