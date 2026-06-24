@@ -6,6 +6,12 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.8.9] — 2026-06-16
+- `weekly-coach`: new skill. Produces a weekly personal coaching debrief — SBI observations, SMART development goals, and 360 feedback prompts — by gathering signals from Gmail, Slack, Google Drive, and Calendar and framing them against the Multiverse Manager Expectations guide. Delivers by email or file.
+
+## [3.8.8] — 2026-06-16
+- `cowork-insights`: new skill. Produces a candid written report on how the user is using Cowork — recurring session patterns, automation opportunities (backward- and forward-looking), tooling gaps, and concrete workflow tips. Invoked explicitly via `/cowork-insights`.
+
 ## [3.8.7] — 2026-06-11
 - `linear-em-dashboard`: truly-empty teams (no cycles, no triage, no issues completed in the
   last 12 weeks — e.g. Legal Team) now show a friendly "No Linear data yet" message instead of
