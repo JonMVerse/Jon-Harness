@@ -80,6 +80,33 @@ The harness ships its own `core` and `security` plugins. It does **not** bundle 
 
 These install at **user scope** (`~/.claude/plugins`), so they apply across all your projects and update via `claude plugin update`. They are a recommendation, not a dependency — the harness works without them.
 
+For cross-session recall ("what did we decide about X last month?"), a community **episodic-memory** plugin that indexes past conversations for retrieval pairs well with the harness's own session-end breadcrumbs (below) — the breadcrumb log gives you the cheap trail, an episodic index gives you full-text recall. Same caveat as above: install at user scope, don't vendor.
+
+## Session continuity & guardrails
+
+Five hooks (see `core/HOOKS.md`) make the fragile parts of long-running agent work automatic:
+
+- **After a context compaction**, the session is re-injected with live git state and the active plan's worklog tail — a summarized session doesn't lose ground truth or redo finished work.
+- **At session end**, a one-line breadcrumb (time, reason, branch, dirty count) lands in `.claude/session-breadcrumbs.log` so the next session can pick up the trail. Zero tokens.
+- **Before every shell command**, a conservative gate blocks high-confidence destructive patterns (`rm -rf /`, force-push to main, `curl | sh`, device wipes) and audit-logs every command.
+- **On every manifest edit in this repo**, a lint hook catches unregistered skills and plugin/marketplace version drift — the two mistakes that ship silently.
+
+These encode the rules we don't want to depend on the model remembering: deterministic guardrails around a probabilistic agent.
+
+## Delegation tiers
+
+`core` ships five orchestration agents whose model routing is owned by the profile, not the invocation — cheap by default, expensive only where judgment lives:
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `scout` | haiku | Read-only recon — search, lookup, "where is X" |
+| `doc-digest` | haiku | Compress a long doc into a fixed digest |
+| `mech-executor` | sonnet | Mechanical, fully-specified work — no design decisions |
+| `executor` | opus | Implementation needing judgment — the default real-dev executor |
+| `verifier` | opus | Fresh-context adversarial check — tries to refute work before it's called done |
+
+Routing rules: spec in one shot (goal, constraints, done-criteria, the why); start with the cheapest tier that can plausibly succeed; escalate after two failures instead of retrying the same tier; batch independent agents into one message so they run concurrently; non-trivial changes get a `verifier` pass before being reported done.
+
 ## Plans as living artefacts
 
 When you enter plan mode, Claude Code writes a plan to `~/.claude/plans/<slug>.md`. The harness's `rename-plan` hook automatically mirrors it into the active project at `plans/YYYY-MM-DD-<slug>/plan.md`, with a `worklog.md` alongside.
@@ -140,10 +167,10 @@ Keep each file under ~200 lines for best adherence.
 
 ## What ships
 
-- **Agents** — `code-reviewer`, `security-reviewer`, `tech-debt-reviewer`, `test-generator`, `documentation-generator`, `code-explorer`
+- **Agents** — reviewers (`code-reviewer`, `security-reviewer`, `tech-debt-reviewer`, `test-generator`, `documentation-generator`, `code-explorer`) plus the delegation tiers (`scout`, `doc-digest`, `mech-executor`, `executor`, `verifier` — see above)
 - **Commands** — `/review`, `/commit`, `/wrap-up`, `/pw-test`, `/a11y-audit`, `/gen-changelog`, …
-- **Skills** — `playwright-cli`, `a11y-audit`, `learn`, `github-project-tickets`, …
-- **Hooks** — `rename-plan` mirrors plan-mode files into the project automatically. Wiring in [`core/HOOKS.md`](core/HOOKS.md).
+- **Skills** — `playwright-cli`, `a11y-audit`, `learn`, `skill-audit`, `github-project-tickets`, …
+- **Hooks** — `rename-plan`, `lint-plugin-manifests`, `bash-gate`, `session-compact-context`, `session-end-breadcrumb` (see above). Wiring in [`core/HOOKS.md`](core/HOOKS.md).
 - **Status line** — model · cwd · branch · context-usage · cost · session duration. Optional, see below.
 
 → Full catalogue, usage, and extension guide: [`core/README.md`](core/README.md).

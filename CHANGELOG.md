@@ -6,6 +6,20 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.9.0] — 2026-07-14
+
+Hooks, agent tiers, and registry hygiene — ideas adopted from Alexander Langolf's personal setup, adapted for a distributed plugin.
+
+- **Hooks** (all new scripts in `core/scripts/`, wired in `hooks/hooks.json`):
+  - `session-compact-context.sh` — SessionStart(compact): after a context compaction, re-injects re-orientation instructions plus live git state and the active plan's worklog tail, so a summarized session doesn't lose ground truth. Zero model calls.
+  - `session-end-breadcrumb.sh` — SessionEnd: appends a one-line breadcrumb (UTC time, reason, branch, dirty-file count) to `.claude/session-breadcrumbs.log`, kept out of version control via `.git/info/exclude`. Zero tokens.
+  - `bash-gate.sh` — PreToolUse(Bash): blocks a conservative denylist (rm -rf on /, ~ or $HOME; force-push to main/master; curl/wget piped to a shell; mkfs / dd to block devices; chmod 777 /) via JSON `permissionDecision: deny`, and logs every command to `.claude/bash-commands.log`.
+  - `lint-plugin-manifests.sh` — PostToolUse(Write|Edit|MultiEdit): in plugin-marketplace repos, enforces the two mechanical authoring rules (every on-disk skill registered in `plugin.json`; `marketplace.json` version mirroring) — exits 2 so violations feed back to Claude.
+- **Agents** — five orchestration-tier profiles with model routing owned by the profile: `scout` (haiku, read-only recon), `mech-executor` (sonnet, fully-specified mechanical work), `executor` (opus, implementation needing judgment), `verifier` (opus, fresh-context adversarial check, read-and-run only), `doc-digest` (haiku, long-doc compression). Routing policy: cheapest tier that can plausibly succeed; escalate after two failures; verifier pass before non-trivial work is reported done.
+- **`skill-audit`**: new skill. Monthly registry hygiene — inventories all registered skills across plugin/user/project scope, grades trigger descriptions, finds overlaps and dead weight, estimates context cost, recommends prunes/merges/rewrites. Read-only.
+- Docs: `HOOKS.md` rewritten to cover all five hooks; README gains a session-continuity section and an episodic-memory companion note; `core/CLAUDE.md` layout updated.
+- Fixed: `rename-plan.sh` no longer tracebacks (exit 1 under `set -e`) on empty or non-JSON stdin — malformed input now exits 0 silently, matching the other hook scripts' defensive contract.
+
 ## [3.8.9] — 2026-06-16
 - `weekly-coach`: new skill. Produces a weekly personal coaching debrief — SBI observations, SMART development goals, and 360 feedback prompts — by gathering signals from Gmail, Slack, Google Drive, and Calendar and framing them against the Multiverse Manager Expectations guide. Delivers by email or file.
 

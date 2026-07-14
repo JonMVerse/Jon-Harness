@@ -1,23 +1,28 @@
 # Plugin Hooks
 
-This plugin ships one Claude Code hook: the **rename-plan** hook, which auto-organises plan files into dated folders with worklogs.
+This plugin ships five Claude Code hooks — deterministic guardrails around a probabilistic agent. The common thread: plan capture, manifest hygiene, shell safety, and continuity across compaction and sessions, all made automatic.
 
-## How it's wired
+| Hook | Event (matcher) | Script | Purpose |
+|------|-----------------|--------|---------|
+| rename-plan | PostToolUse (`Write\|Edit\|MultiEdit`) | `scripts/rename-plan.sh` | Auto-organises plan files into dated folders with worklogs |
+| lint-plugin-manifests | PostToolUse (`Write\|Edit\|MultiEdit`) | `scripts/lint-plugin-manifests.sh` | In plugin-marketplace repos: flags unregistered skills and plugin/marketplace version drift |
+| bash-gate | PreToolUse (`Bash`) | `scripts/bash-gate.sh` | Blocks high-confidence destructive commands; logs every command |
+| session-compact-context | SessionStart (`compact`) | `scripts/session-compact-context.sh` | Re-injects orientation + live git state after a context compaction |
+| session-end-breadcrumb | SessionEnd | `scripts/session-end-breadcrumb.sh` | Appends a one-line breadcrumb so the next session can pick up the trail |
 
-`hooks/hooks.json` registers a `PostToolUse` hook that runs after every `Write`, `Edit`, or `MultiEdit` tool call:
+## How they're wired
+
+`hooks/hooks.json` registers all five. The rename-plan entry looks like this; the others follow the same shape under their own event keys:
 
 ```json
 {
-  "description": "Automatic plan organization hooks",
   "hooks": {
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/rename-plan.sh"
-          }
+          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/rename-plan.sh" },
+          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/lint-plugin-manifests.sh" }
         ]
       }
     ]
@@ -27,15 +32,35 @@ This plugin ships one Claude Code hook: the **rename-plan** hook, which auto-org
 
 What each piece does:
 
-- **`PostToolUse`** — fires after the tool succeeds, so the file already exists on disk when the script runs.
-- **`matcher: "Write|Edit|MultiEdit"`** — the `|` is a literal alternation of exact tool names. The hook only fires for those three tools, not for every PostToolUse event.
-- **`${CLAUDE_PLUGIN_ROOT}`** — resolves to the plugin's installation directory, so the script works regardless of where the plugin was installed or what the working directory is.
+- **`PreToolUse` / `PostToolUse`** — fire before / after the tool call; tool-name matchers are literal alternations of exact tool names.
+- **`SessionStart` with matcher `compact`** — fires only when a session resumes from a context compaction (other sources: `startup`, `resume`, `clear`). The script's stdout is injected into the session context.
+- **`SessionEnd`** — takes no tool matcher; receives a `reason` on stdin. Cannot block anything — informational only.
+- **`${CLAUDE_PLUGIN_ROOT}`** — resolves to the plugin's installation directory, so the scripts work regardless of where the plugin was installed or what the working directory is.
 
-When the plugin is installed and enabled via `/plugin marketplace`, this file is registered on the next session start. If you enable the plugin mid-session, run **`/reload-plugins`** to activate the hook without restarting Claude Code. The hook unregisters automatically when the plugin is disabled.
+## bash-gate
 
-> **Heads-up:** if you also have this script wired in `~/.claude/settings.json` (e.g. from a pre-plugin manual install), the hook will fire twice on each Write/Edit. Remove the user-level entry to let the plugin be the sole source.
+Reads the pending Bash command from stdin. Two jobs:
 
-## What the script does
+1. **Deny high-confidence destructive patterns** via JSON `permissionDecision: "deny"` — `rm -rf` aimed at `/`, `~` or `$HOME`; force-push to main/master (`--force-with-lease` is allowed); `curl`/`wget` piped straight into a shell; `mkfs` / `dd of=/dev/…`; `chmod 777 /`. The list is deliberately conservative: a false block is easy to work around, a false pass is not.
+2. **Audit-log every command** (flattened, 500-char cap) to `.claude/bash-commands.log`, kept out of version control via `.git/info/exclude`.
+
+## lint-plugin-manifests
+
+Only acts when the edited file is a `plugin.json`, `marketplace.json`, or `SKILL.md` inside a repo whose root has `.claude-plugin/marketplace.json` — everywhere else it exits 0 instantly. It enforces this harness's two mechanical authoring rules: every on-disk `skills/<dir>` must be registered in its plugin's `plugin.json`, and `marketplace.json` must mirror each plugin's version. Violations exit 2, which feeds the findings back to Claude to fix in-session (the write itself is not blocked).
+
+## session-compact-context
+
+After a compaction, the summarized session re-receives: an instruction to trust disk state over the summary, the live git branch / dirty files / recent commits, and the tail of the most recently touched `plans/*/worklog.md`. Zero model calls — everything is read from disk.
+
+## session-end-breadcrumb
+
+Appends `<utc-time> | reason=<reason> | branch=<branch> | dirty=<n>` to `.claude/session-breadcrumbs.log` (auto-added to `.git/info/exclude`). Zero tokens — no model runs at session end. The log is the cheap end of episodic memory: `tail` it at the start of a session to see how the last one ended.
+
+When the plugin is installed and enabled via `/plugin marketplace`, the hooks register on the next session start. If you enable the plugin mid-session, run **`/reload-plugins`** to activate them without restarting Claude Code. They unregister automatically when the plugin is disabled.
+
+> **Heads-up:** if you also have any of these scripts wired in `~/.claude/settings.json` (e.g. from a pre-plugin manual install), those hooks will fire twice. Remove the user-level entry to let the plugin be the sole source.
+
+## rename-plan — what the script does
 
 `scripts/rename-plan.sh` reads the tool-call JSON from stdin, extracts `tool_input.file_path`, and acts on either of two source paths. Anything else exits 0 and the tool call proceeds normally.
 

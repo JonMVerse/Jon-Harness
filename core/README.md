@@ -66,14 +66,15 @@ Capabilities Claude invokes automatically when relevant.
 
 ## Hooks
 
-`hooks/hooks.json` registers a `PostToolUse` hook on `Write|Edit|MultiEdit` that calls `scripts/rename-plan.sh`. The script:
+`hooks/hooks.json` registers five hooks:
 
-- **Mirrors plan-mode files** from `~/.claude/plans/<slug>.md` into the running project's `plans/YYYY-MM-DD-<slug>/plan.md` (uses `$CLAUDE_PROJECT_DIR`). This is the primary path — it captures plans authored via Claude Code's plan mode into the repo automatically.
-- **Organises in-project drafts** at `<project>/plans/.tmp/<slug>.md` into the same dated-folder layout (sibling, not under `.tmp/`).
-- Creates and maintains `worklog.md` alongside each plan.
-- Routes agent worklogs (in-project flow) to `worklog-<id>.md` next to the parent plan.
+- **rename-plan** (PostToolUse on `Write|Edit|MultiEdit`) — mirrors plan-mode files from `~/.claude/plans/<slug>.md` into the running project's `plans/YYYY-MM-DD-<slug>/plan.md` (uses `$CLAUDE_PROJECT_DIR`), organises in-project drafts at `plans/.tmp/`, and maintains `worklog.md` / agent `worklog-<id>.md` files alongside each plan.
+- **lint-plugin-manifests** (PostToolUse on `Write|Edit|MultiEdit`) — in plugin-marketplace repos, flags unregistered skills and plugin/marketplace version drift back to Claude.
+- **bash-gate** (PreToolUse on `Bash`) — blocks a conservative denylist of destructive commands; audit-logs every command to `.claude/bash-commands.log`.
+- **session-compact-context** (SessionStart, matcher `compact`) — re-injects live git state and the active plan's worklog after a context compaction.
+- **session-end-breadcrumb** (SessionEnd) — appends a one-line trail entry to `.claude/session-breadcrumbs.log`. Zero tokens.
 
-Setup details and the status-line config: [HOOKS.md](HOOKS.md).
+Full behavior, setup details, and the status-line config: [HOOKS.md](HOOKS.md).
 
 ## Workflow principles
 
@@ -204,13 +205,17 @@ Run deployment checks then push to production.
 core/
 ├── .claude-plugin/
 │   └── plugin.json          plugin metadata
-├── agents/                  agent definitions (8 files)
-├── commands/                slash-command definitions (11 files)
-├── skills/                  skill directories with SKILL.md (9 skills)
+├── agents/                  agent definitions (reviewers + delegation tiers)
+├── commands/                slash-command definitions
+├── skills/                  skill directories with SKILL.md
 ├── hooks/
-│   └── hooks.json           hook registrations
+│   └── hooks.json           hook registrations (5 hooks)
 ├── scripts/
 │   ├── rename-plan.sh       plan-organising hook script
+│   ├── lint-plugin-manifests.sh  manifest-hygiene hook script
+│   ├── bash-gate.sh         shell-command gate hook script
+│   ├── session-compact-context.sh   post-compaction re-orientation
+│   ├── session-end-breadcrumb.sh    session-end trail logger
 │   └── statusline.sh        status-line renderer
 ├── HOOKS.md                 hooks + status-line setup
 └── README.md                this file

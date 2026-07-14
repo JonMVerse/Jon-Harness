@@ -3,7 +3,16 @@ set -euo pipefail
 
 INPUT=$(cat)
 echo "$INPUT" >> /tmp/rename-plan-debug.log
-FILE=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))")
+# Tolerate malformed/empty stdin: real hook invocations always send JSON, but
+# a manual or misconfigured call must exit 0 silently, not traceback (set -e).
+FILE=$(printf '%s' "$INPUT" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+print(d.get('tool_input', {}).get('file_path', '') if isinstance(d, dict) else '')
+" 2>/dev/null || true)
 
 [ -z "$FILE" ] && exit 0
 FILE=$(realpath "$FILE" 2>/dev/null || echo "$FILE")
