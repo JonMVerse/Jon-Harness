@@ -7,11 +7,16 @@ skill (or any board meeting the agent-ready standard). You are the orchestrator:
 you route, gate, and report — and **a human approves every plan and every PR**. The agent
 never green-lights itself. Requires the Linear MCP.
 
-Usage: `/linear-build <project name or ID> [--batch N] [--dry-run]`
+Usage: `/linear-build <project name or ID> [--batch N] [--dry-run] [--allow-soft-deps]`
 
 `--dry-run`: execute setup and the pick/lint/size/plan stages as a report only — show what
 would be labelled, fixed, sized, and dispatched, with proposed plans — but write nothing to
 Linear, dispatch no executors, and push no PRs.
+
+`--allow-soft-deps`: opt in to treating blockers that are in review with a PR pushed as
+satisfied (see Pick). Default is off: dependency chains pause at review boundaries and the
+human merge re-arms them. Only sensible for a solo maintainer who reviews quickly and
+accepts stacked-PR rebasing.
 
 ## Adversarial stance (applies at every stage)
 
@@ -36,11 +41,20 @@ N *independent* tickets in parallel — never two tickets that share a `blockedB
 touch the same files; establishing file overlap requires a scout pass across the candidate
 set *before* batch selection, since per-ticket scouting happens later):
 
-1. **Pick.** List the project's unstarted tickets whose blockers are all completed/canceled
-   — or in review state with a PR pushed, which counts as a **soft dependency**: eligible,
-   but the softness must be named in the plan proposal and the PR description (if the
-   upstream PR changes in review, this work may need rebasing). Without this rule, chained
-   boards stall at the first review boundary, since the agent never merges.
+1. **Pick.** List the project's unstarted tickets whose blockers are all completed/canceled.
+   Chains therefore pause at review boundaries — the agent never merges, so a ticket whose
+   blocker sits in review is *not* eligible; the human merge is what re-arms the chain. This
+   is deliberate: it paces the loop to real review throughput, keeps every PR cut against
+   main, and avoids stacked-PR rebase cascades. When a chain pauses, move to independent
+   tickets elsewhere on the board; if everything eligible is exhausted, stop and report
+   what's waiting on merges.
+   With `--allow-soft-deps`, a blocker in review with a PR pushed counts as satisfied
+   (**soft dependency**) — the softness must be named in the plan proposal and the PR
+   description, the new branch is cut from the upstream PR's branch (stacked), and an
+   upstream rebase triggers re-verification downstream.
+   Also surface **stalled** tickets: in-progress with no open PR (an interrupted or
+   twice-refuted earlier run) — re-lint and propose re-dispatch, or return them to unstarted
+   with a comment explaining why.
    Also surface **stalled** tickets: in-progress with no open PR (an interrupted or
    twice-refuted earlier run) — re-lint and propose re-dispatch, or return them to unstarted
    with a comment explaining why.
@@ -124,7 +138,8 @@ set *before* batch selection, since per-ticket scouting happens later):
 
 ## Stop conditions
 
-Stop the loop and hand back to the user when: a human-gated ticket is the only eligible work;
+Stop the loop and hand back to the user when: every remaining chain is paused at a review
+boundary awaiting a human merge; a human-gated ticket is the only eligible work;
 a plan is waiting on green light with nothing else independent to progress; a contract a
 ticket depends on is missing; two consecutive tickets end BLOCKED or REFUTED; or the
 milestone the tickets belong to has passed its date (re-plan beats silent slippage — suggest
