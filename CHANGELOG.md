@@ -6,7 +6,14 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [3.9.0] — 2026-07-14
+## [3.10.0] — 2026-07-21
+
+Delivery planning → agent-driven execution: a Linear-native planning skill and the command that turns its output into work for the executor tier.
+
+- **`delivery-reality-check`**: new skill. Stress-tests a proposed timeline against real Linear data (scope, estimates, milestones, cycle load), maps hard/pattern/hedge dependencies, works four scenario levers (scope cut, parallelisation, resourcing with escape valves, done-redefinition), and escalates outputs from lane timeline → week-by-week milestone table with a "capability delivered" column → saved plan → compiled Linear board. Compilation makes sequencing machine-readable (`blockedBy` relations, dated milestones), rewrites tickets to the bundled agent-ready standard (`references/agent-ready-ticket.md`: 8-point checklist, routing labels `agent:mech` / `agent:judgment` / `human`, lint verdicts), and cross-checks non-engineering gates (compliance screened at PAVE level first — escalating to DPIA only when the screening indicates it; doc↔board date drift; missing implied tickets).
+- **`/linear-build`**: new command. Orchestrates delivery from an agent-ready board with a human in the loop at both ends — walks the dependency graph for unblocked tickets, ensures the routing labels exist on the team and are applied, lints each ticket against the readiness standard, widens the lens beyond the ticket (file/contract overlap, product-vs-tech implications surfaced to the human, never resolved silently), human-gates auth/personal-data/spend/migration work and anything under an open privacy action, then **proposes an implementation outline (approach, adversarially-argued alternatives, wider impact, verification) for explicit human green light before any code is written**. Approved plans compile into one-shot briefs routed to `mech-executor`/`executor` (scout pass when grounding is thin); output must survive an adversarial `verifier` pass **and** a `/review`-style fan-out (code/security/tech-debt reviewers) before a PR is pushed; the PR carries the plan + evidence and requests human review — the agent never merges. Adversarial stance applies at every stage: each decision names its strongest alternative and why it loses. Stops on consecutive blocks/refutations or a passed milestone date and recommends re-planning.
+
+
 
 Hooks, agent tiers, and registry hygiene — ideas adopted from Alexander Langolf's personal setup, adapted for a distributed plugin.
 

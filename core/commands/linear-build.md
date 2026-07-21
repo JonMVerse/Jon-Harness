@@ -1,0 +1,120 @@
+---
+description: drive delivery from an agent-ready Linear board — label tickets, propose an implementation plan for human approval, dispatch executor agents, adversarially review, push a PR for human review, write status back
+---
+
+Drive delivery from a Linear project whose board was compiled by the `delivery-reality-check`
+skill (or any board meeting the agent-ready standard). You are the orchestrator: agents build,
+you route, gate, and report — and **a human approves every plan and every PR**. The agent
+never green-lights itself. Requires the Linear MCP.
+
+Usage: `/linear-build <project name or ID> [--batch N] [--dry-run]`
+
+## Adversarial stance (applies at every stage)
+
+At each decision point, actively argue against your own default before committing: is this
+the right ticket to do next, the right approach, the right scope? Name the strongest
+alternative and why it loses. A choice you cannot defend against its best alternative is not
+ready to execute. This applies to ticket selection, implementation planning, verification,
+and PR review alike.
+
+## Setup (once per run)
+
+1. Resolve the project and its team.
+2. **Ensure routing labels exist on the team** — `agent:mech`, `agent:judgment`, `human` —
+   creating any that are missing.
+3. **Apply labels**: for tickets in the project that lack a routing label, propose one from
+   the lint (below), show the user the proposed labelling as a table, and apply on approval.
+
+## Loop
+
+Repeat until no eligible tickets remain (default one ticket at a time; `--batch N` runs up to
+N *independent* tickets in parallel — never two tickets that share a `blockedBy` chain or
+touch the same files):
+
+1. **Pick.** List the project's unstarted tickets whose blockers are all completed/canceled.
+   Order by milestone date, then priority. Adversarial check: would a different ticket
+   unblock more downstream work or retire more risk? Say so if yes. Skip tickets labelled
+   `human` — surface them to the user as "awaiting human" instead.
+
+2. **Lint.** Check the ticket against the agent-ready standard in
+   `../skills/delivery-reality-check/references/agent-ready-ticket.md`.
+   - READY → continue.
+   - FIXABLE → draft the fix, show the user, update the ticket on approval, then continue.
+   - BLOCKED → report what's missing and who owns the decision; move on to the next ticket.
+
+   **Sizing**: if a ticket is otherwise ready but unsized (or its size predates a scope
+   change), propose an estimate on the XS/S/M scale (XS = 0.5 day, S = 1 day, M = up to
+   3 days) with one line of reasoning — grounded in the entry points and to-do list, and
+   calibrated against comparable sized tickets on the same team. Adversarial check: state
+   what would make it the next size up. Apply to Linear on the user's approval, batching
+   sizing proposals with any FIXABLE fixes so approval is one pass, not many. Bigger than
+   M → propose the split instead of a size.
+
+3. **Widen the lens.** A ticket is not an island. Before planning, check: which other tickets
+   or projects touch the same files, contracts, or user journeys; what product behaviour
+   changes (not just what code changes); whether the change constrains a decision another
+   team hasn't made yet. Use a scout pass for file-level overlap. Product vs tech tension —
+   e.g. "fastest implementation" vs "the UX the roadmap implies" — is surfaced to the human,
+   never resolved silently by the agent.
+
+4. **Gate.** Regardless of labels, if the diff will plausibly touch authentication, personal
+   or learner data, spend-bearing integrations, or destructive migrations — stop and get an
+   explicit go-ahead from the user before dispatching. If the project has an open privacy or
+   compliance action — screening-level check or full assessment — tickets in its scope are
+   human-gated until the user says otherwise. Don't demand an assessment that isn't
+   indicated: gating applies only when one exists or the ticket's data footprint plainly
+   calls for one.
+
+5. **Propose the plan — human green light required.** For every agent-bound ticket, present
+   a short implementation outline before any code is written:
+   - **Approach**: what will be built, entry points, contract honoured.
+   - **Alternatives considered**: at least one credible alternative and why it was rejected
+     (the adversarial case, not a strawman).
+   - **Wider impact**: product-facing changes, affected tickets/teams, dependency
+     implications from step 3.
+   - **Verification**: exactly how done will be proven.
+   Wait for explicit approval. The human may amend the approach — amendments go into the
+   ticket so the brief stays the source of truth. No dispatch without a green light.
+
+6. **Dispatch.** Compile the approved plan + ticket into a one-shot brief (goal, constraints,
+   done-criteria, the why, entry points, contract links). Route by label:
+   - `agent:mech` → mech-executor. Escalate to executor after two failed attempts.
+   - `agent:judgment` → executor, preceded by a scout pass if the brief lacks file-level
+     grounding.
+   Move the ticket to its in-progress state and note the dispatch + approved plan in a
+   ticket comment.
+
+7. **Verify.** All non-trivial output gets a verifier pass — fresh context, adversarial by
+   design: it tries to REFUTE the done-claim using the ticket's Verification section.
+   REFUTED → back to the executor with the evidence; two refutations → stop and surface to
+   the user.
+
+8. **Adversarial review before any PR is pushed.** Fan out `code-reviewer`,
+   `security-reviewer`, and `tech-debt-reviewer` in parallel over the diff (as `/review`
+   does) and consolidate findings by severity. Blocking findings go back to the executor;
+   re-verify after fixes. Only a diff that has survived both the verifier and the review
+   fan-out proceeds.
+
+9. **Push the PR and request human review.** Commit and open the PR per the host repo's
+   workflow (`/commit`), with a description containing: the approved plan, what changed,
+   verification evidence, review findings (including accepted non-blocking ones), and the
+   wider-impact notes from step 3. Request review from the ticket's human owner (or the
+   user if unset). **The agent never merges** — merge is a human act.
+
+10. **Report back.** Write a ticket comment with the PR link, verification evidence, and
+    review summary; move the ticket to its review state (not done — done follows the human
+    merge). Newly unblocked tickets become eligible next iteration.
+
+## Stop conditions
+
+Stop the loop and hand back to the user when: a human-gated ticket is the only eligible work;
+a plan is waiting on green light with nothing else independent to progress; a contract a
+ticket depends on is missing; two consecutive tickets end BLOCKED or REFUTED; or the
+milestone the tickets belong to has passed its date (re-plan beats silent slippage — suggest
+re-running `delivery-reality-check`).
+
+## End of run
+
+Summarise: tickets with PRs awaiting human review, tickets awaiting plan approval, tickets
+awaiting humans and why, tickets blocked and on what, and the board's remaining critical
+path. Offer to draft a project status update in Linear from that summary.
