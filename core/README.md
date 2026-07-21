@@ -47,6 +47,7 @@ Quick, single-shot slash commands.
 | `/product-lens` | Product-perspective review before building |
 | `/optimize-doc` | Tightens a markdown/documentation file |
 | `/warp` | Builds a session-summary you can paste into a fresh `/clear`'d session |
+| `/linear-build` | Drives delivery from an agent-ready Linear board — labels tickets, proposes plans for human green light, dispatches `scout`/`mech-executor`/`executor`, adversarially verifies + reviews, pushes PRs for human review, writes status back |
 
 ## Skills
 
@@ -63,6 +64,7 @@ Capabilities Claude invokes automatically when relevant.
 | `product-lens` | Strategic product questions arise before building |
 | `wrap-up` | Closing out plan execution |
 | `wt-merge` | Merging worktree branches |
+| `delivery-reality-check` | A timeline needs stress-testing against Linear data, or a plan needs compiling into an agent-executable board |
 
 ## Hooks
 

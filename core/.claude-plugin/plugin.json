@@ -1,10 +1,10 @@
 {
     "name": "core",
     "description": "Core utils for working with Claude Code - agents, commands, skills, and workflow automation",
-    "version": "3.9.0",
+    "version": "3.10.0",
     "author": {
         "name": "Multiverse"
     },
     "keywords": ["workflow", "automation", "review", "testing", "planning", "development"],
-    "skills": ["./skills/a11y-audit", "./skills/atlas-ai-assessment", "./skills/gen-changelog", "./skills/github-project-tickets", "./skills/langfuse-query", "./skills/learn", "./skills/linear-em-dashboard", "./skills/optimize-doc", "./skills/playwright-cli", "./skills/product-lens", "./skills/wrap-up", "./skills/wt-merge", "./skills/mv-slides", "./skills/onboarding-clone", "./skills/atlas-verify", "./skills/doc-update", "./skills/goal-prep", "./skills/security-review", "./skills/cowork-insights", "./skills/weekly-coach", "./skills/skill-audit"]
+    "skills": ["./skills/a11y-audit", "./skills/atlas-ai-assessment", "./skills/gen-changelog", "./skills/github-project-tickets", "./skills/langfuse-query", "./skills/learn", "./skills/linear-em-dashboard", "./skills/optimize-doc", "./skills/playwright-cli", "./skills/product-lens", "./skills/wrap-up", "./skills/wt-merge", "./skills/mv-slides", "./skills/onboarding-clone", "./skills/atlas-verify", "./skills/doc-update", "./skills/goal-prep", "./skills/security-review", "./skills/cowork-insights", "./skills/weekly-coach", "./skills/skill-audit", "./skills/delivery-reality-check"]
 }
