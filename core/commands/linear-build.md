@@ -26,6 +26,11 @@ alternative and why it loses. A choice you cannot defend against its best altern
 ready to execute. This applies to ticket selection, implementation planning, verification,
 and PR review alike.
 
+Corollary for every human decision point: **never ask for a bare approval**. Each request
+for a green light states the risk of each available choice — what can go wrong if we
+proceed, what it costs if we don't, and the blast radius either way. The human decides;
+the agent's job is to make the decision informed.
+
 ## Setup (once per run)
 
 1. Resolve the project and its team.
@@ -85,7 +90,10 @@ set *before* batch selection, since per-ticket scouting happens later):
 
 4. **Gate.** Regardless of labels, if the diff will plausibly touch authentication, personal
    or learner data, spend-bearing integrations, or destructive migrations — stop and get an
-   explicit go-ahead from the user before dispatching. If the project has an open privacy or
+   explicit go-ahead from the user before dispatching. The go-ahead request must explain
+   the risk, concretely: which sensitive surface is touched and how, the worst plausible
+   outcome (data exposed, spend runaway, irreversible loss), what mitigates it, and whether
+   the change is reversible. If the project has an open privacy or
    compliance action — screening-level check or full assessment — tickets in its scope are
    human-gated until the user says otherwise. Don't demand an assessment that isn't
    indicated: gating applies only when one exists or the ticket's data footprint plainly
@@ -99,6 +107,9 @@ set *before* batch selection, since per-ticket scouting happens later):
      (the adversarial case, not a strawman).
    - **Wider impact**: product-facing changes, affected tickets/teams, dependency
      implications from step 3.
+   - **Risks**: what could go wrong with the chosen approach, its blast radius, and the
+     rollback path — plus the risk of *not* doing the ticket now (what it blocks or lets
+     rot).
    - **Verification**: exactly how done will be proven.
    Wait for explicit approval. The human may amend the approach — amendments go into the
    ticket so the brief stays the source of truth. No dispatch without a green light.
