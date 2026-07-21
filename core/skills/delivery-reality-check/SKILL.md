@@ -8,7 +8,9 @@ description: >
   interact or align, wants resourcing scenarios ("what if I add a junior?", "who can we
   repurpose?"), or wants a plan converted into tickets agents can build from. Also trigger
   on "timeline these side by side", "break it into lanes", or "make these tickets agent
-  ready". Requires the Linear MCP; degrades to advisory-only if Linear tools are absent.
+  ready". NOT for retrospective metrics/analytics dashboards (velocity charts, carry-over
+  tracking) — that is linear-em-dashboard; this skill is forward-looking planning.
+  Requires the Linear MCP; degrades to advisory-only if Linear tools are absent.
 ---
 
 # Delivery Reality Check
@@ -90,7 +92,9 @@ Before presenting any go-live date:
   built: does it process personal data, use AI on data about people, introduce a new
   vendor, or change who can access what? If none apply, note that and move on — no
   rabbit hole. If any apply, check for an existing PAVE-level assessment for the
-  workstream (search Slack/Drive if connected); run or request one if absent. Only a
+  workstream (search Slack/Drive if connected); run or request one if absent. (PAVE is
+  Multiverse's privacy screening; outside Multiverse, substitute your organisation's
+  screening process.) Only a
   PAVE outcome that indicates deeper review (e.g. a RED verdict) escalates to a DPIA —
   and at that point it becomes a go-live gate equal to any infra dependency. One trap
   worth naming when it applies: shadow/dark traffic that processes real user data is in
@@ -116,7 +120,9 @@ team) to drive delivery:
    tickets with `blockedBy` chaining — oversized tickets are where agent runs and human
    reviews both go to die.
 4. **Triage lane**: ensure the routing labels exist on the team (create if missing), then
-   label each ticket `agent:mech` (fully specified, pattern-following),
+   propose a label per ticket and **apply on the user's approval** (labels are the routing
+   authority for what agents may touch — never applied silently): `agent:mech` (fully
+   specified, pattern-following),
    `agent:judgment` (needs local design decisions), or `human` (architecture-shaping,
    creates the pattern others follow, or touches a human-gate area — auth, personal data,
    spend, destructive migrations).

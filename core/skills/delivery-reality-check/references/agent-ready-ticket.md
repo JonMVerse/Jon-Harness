@@ -1,7 +1,8 @@
 # Agent-ready ticket standard
 
 A ticket is agent-ready when an executor agent (or a new joiner) can pick it up cold — no
-meeting history, no Slack archaeology, no "ask Sawda". The ticket **is** the brief: it maps
+meeting history, no Slack archaeology, no "ask the one person who knows". The ticket **is**
+the brief: it maps
 1:1 onto the executor agent's contract (goal, constraints, done-criteria, the why).
 
 ## Checklist
@@ -24,8 +25,10 @@ A ticket passes only if every item holds:
 6. **One reviewable unit, sized.** Scoped to a single coherent PR and estimated on the
    XS/S/M scale (XS = 0.5 day, S = 1 day, M = up to 3 days). Bigger than M, or needing two
    PRs → split into chained tickets. A missing estimate is FIXABLE, not BLOCKED: the
-   linting agent proposes a size with reasoning, calibrated against comparable sized
-   tickets on the team, and applies it on human approval.
+   linter proposes a size with reasoning, calibrated against comparable sized tickets on
+   the team, and applies it on human approval. Canonical numeric mapping for Linear's
+   estimate field: XS = 1, S = 2, M = 3 (the day values — 0.5 / 1 / up to 3 — live in the
+   scale definition, not the field).
 7. **Out-of-scope fence.** What the agent must NOT touch, so it doesn't wander (adjacent
    refactors, other flags, UI polish).
 8. **Verification step.** How the agent proves completion before reporting done — the exact

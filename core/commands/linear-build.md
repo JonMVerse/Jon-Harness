@@ -9,6 +9,10 @@ never green-lights itself. Requires the Linear MCP.
 
 Usage: `/linear-build <project name or ID> [--batch N] [--dry-run]`
 
+`--dry-run`: execute setup and the pick/lint/size/plan stages as a report only — show what
+would be labelled, fixed, sized, and dispatched, with proposed plans — but write nothing to
+Linear, dispatch no executors, and push no PRs.
+
 ## Adversarial stance (applies at every stage)
 
 At each decision point, actively argue against your own default before committing: is this
@@ -29,9 +33,17 @@ and PR review alike.
 
 Repeat until no eligible tickets remain (default one ticket at a time; `--batch N` runs up to
 N *independent* tickets in parallel — never two tickets that share a `blockedBy` chain or
-touch the same files):
+touch the same files; establishing file overlap requires a scout pass across the candidate
+set *before* batch selection, since per-ticket scouting happens later):
 
-1. **Pick.** List the project's unstarted tickets whose blockers are all completed/canceled.
+1. **Pick.** List the project's unstarted tickets whose blockers are all completed/canceled
+   — or in review state with a PR pushed, which counts as a **soft dependency**: eligible,
+   but the softness must be named in the plan proposal and the PR description (if the
+   upstream PR changes in review, this work may need rebasing). Without this rule, chained
+   boards stall at the first review boundary, since the agent never merges.
+   Also surface **stalled** tickets: in-progress with no open PR (an interrupted or
+   twice-refuted earlier run) — re-lint and propose re-dispatch, or return them to unstarted
+   with a comment explaining why.
    Order by milestone date, then priority. Adversarial check: would a different ticket
    unblock more downstream work or retire more risk? Say so if yes. Skip tickets labelled
    `human` — surface them to the user as "awaiting human" instead.
@@ -63,7 +75,8 @@ touch the same files):
    compliance action — screening-level check or full assessment — tickets in its scope are
    human-gated until the user says otherwise. Don't demand an assessment that isn't
    indicated: gating applies only when one exists or the ticket's data footprint plainly
-   calls for one.
+   calls for one. If the user declines the go-ahead, relabel the ticket `human` with a
+   comment recording the refusal — otherwise the pick step re-selects it every iteration.
 
 5. **Propose the plan — human green light required.** For every agent-bound ticket, present
    a short implementation outline before any code is written:
@@ -78,7 +91,8 @@ touch the same files):
 
 6. **Dispatch.** Compile the approved plan + ticket into a one-shot brief (goal, constraints,
    done-criteria, the why, entry points, contract links). Route by label:
-   - `agent:mech` → mech-executor. Escalate to executor after two failed attempts.
+   - `agent:mech` → mech-executor. Escalate to executor after two failed attempts (a
+     REFUTED verdict counts as a failed attempt).
    - `agent:judgment` → executor, preceded by a scout pass if the brief lacks file-level
      grounding.
    Move the ticket to its in-progress state and note the dispatch + approved plan in a
@@ -86,13 +100,16 @@ touch the same files):
 
 7. **Verify.** All non-trivial output gets a verifier pass — fresh context, adversarial by
    design: it tries to REFUTE the done-claim using the ticket's Verification section.
-   REFUTED → back to the executor with the evidence; two refutations → stop and surface to
-   the user.
+   REFUTED → back to the executor with the evidence; two refutations on the same ticket
+   (regardless of executor tier) → return the ticket to unstarted with a comment explaining
+   the failure, then stop and surface to the user.
 
 8. **Adversarial review before any PR is pushed.** Fan out `code-reviewer`,
    `security-reviewer`, and `tech-debt-reviewer` in parallel over the diff (as `/review`
    does) and consolidate findings by severity. Blocking findings go back to the executor;
-   re-verify after fixes. Only a diff that has survived both the verifier and the review
+   re-verify after fixes. Two review rounds with blocking findings still standing → same
+   treatment as double refutation: ticket back to unstarted with the evidence, stop, and
+   surface to the user. Only a diff that has survived both the verifier and the review
    fan-out proceeds.
 
 9. **Push the PR and request human review.** Commit and open the PR per the host repo's
