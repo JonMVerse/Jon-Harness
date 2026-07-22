@@ -3,7 +3,8 @@ name: delivery-reality-check
 description: >
   Stress-test a delivery timeline against real Linear data, then compile the resulting plan
   into an agent-executable Linear board. Trigger whenever someone asks if a timeline is
-  realistic ("is 2 weeks realistic?", "can we ship by <date>?", "dev complete by <date>"),
+  realistic ("is 2 weeks realistic?", "can we ship by the 21st?", "dev complete by end of
+  August"),
   asks to plan or milestone a workstream week-by-week, asks how two projects' timelines
   interact or align, wants resourcing scenarios ("what if I add a junior?", "who can we
   repurpose?"), or wants a plan converted into tickets agents can build from. Also trigger
