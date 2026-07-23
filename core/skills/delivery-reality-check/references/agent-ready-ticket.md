@@ -79,6 +79,10 @@ Run: <exact commands>. Expected: <results>.
 When auditing an existing ticket, return one of:
 
 - **READY** — passes all eight checks; assign routing label.
-- **FIXABLE** — draft the missing sections from project context and present for approval.
+- **FIXABLE** — the context exists but isn't written down. Draft the missing sections
+  **only from source the user provides or points you to** (spec, ADR, design doc, exemplar
+  code, the implementation being ported) or that you can read in-repo — **never fabricate
+  it**. If the substance can't be sourced, downgrade to BLOCKED. Present for approval; never
+  auto-edit an actively-curated board.
 - **BLOCKED** — the contract or a decision doesn't exist yet; name what must be decided,
   by whom, and link the blocking ticket.

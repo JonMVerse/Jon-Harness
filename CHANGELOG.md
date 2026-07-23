@@ -6,6 +6,10 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.11.0] — 2026-07-23
+
+`delivery-reality-check` gains a standalone **ticket-readiness audit** (Phase 8): lint an existing board's tickets against the agent-ready standard — READY / FIXABLE / BLOCKED — independent of a timeline question, surfacing the thin-and-agent-labelled cluster that wastes executor runs. New guardrail: **never fabricate ticket context** — enrichment draws only from source the user provides or points to (spec / ADR / exemplar code / the implementation being ported); unsourceable substance is BLOCKED with a named decision-owner, not guessed. Triggers extended to "are these tickets ready for agents / which lack context / audit the board".
+
 ## [3.10.0] — 2026-07-21
 
 Delivery planning → agent-driven execution: a Linear-native planning skill and the command that turns its output into work for the executor tier.

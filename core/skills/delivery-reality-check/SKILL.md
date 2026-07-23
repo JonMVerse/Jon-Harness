@@ -9,8 +9,11 @@ description: >
   interact or align, wants resourcing scenarios ("what if I add a junior?", "who can we
   repurpose?"), or wants a plan converted into tickets agents can build from. Also trigger
   on "timeline these side by side", "break it into lanes", or "make these tickets agent
-  ready". NOT for retrospective metrics/analytics dashboards (velocity charts, carry-over
-  tracking) — that is linear-em-dashboard; this skill is forward-looking planning.
+  ready". Also trigger to **audit an existing board's tickets for agent-readiness** —
+  "are these tickets ready for agents", "which tickets lack context", "these tickets are
+  empty / need more context", "audit the board". NOT for retrospective metrics/analytics
+  dashboards (velocity charts, carry-over tracking) — that is linear-em-dashboard; this
+  skill is forward-looking planning.
   Requires the Linear MCP; degrades to advisory-only if Linear tools are absent.
 ---
 
@@ -132,6 +135,32 @@ team) to drive delivery:
 
 Hand off: tell the user the board is compiled and `/linear-build` can start executing it.
 
+## Phase 8 — Ticket-readiness audit (standalone, on request)
+
+Runs independently of a timeline question — when someone points at an existing board and
+asks whether its tickets carry enough context for an executor agent (or a new joiner) to
+pick them up cold. Same standard as Phase 7 step 3, run as an audit rather than a rewrite.
+
+1. **Lint every active ticket** (exclude Done / Canceled / Duplicate) against the eight
+   checks in [references/agent-ready-ticket.md](references/agent-ready-ticket.md), assigning
+   one verdict each: **READY** / **FIXABLE** / **BLOCKED**. This is read-heavy, self-contained
+   classification — delegate it to a subagent (hand it the standard + project id; it returns
+   the table, not raw ticket dumps). Note relations can't be read back via the Linear MCP —
+   judge `blockedBy` from prose and say so.
+2. **Report**: verdict counts, a table grouped FIXABLE → BLOCKED → READY (ticket · verdict ·
+   triage label · biggest gaps · where the context lives / decision needed), and the
+   **priority-to-fix cluster** — tickets that are thin (FIXABLE/BLOCKED) **and** labelled
+   `agent:mech`/`agent:judgment`, because those are the ones that waste agent runs and force
+   senior clarification loops. List deferred/"Future"-milestone tickets separately so they
+   don't inflate the urgent count.
+3. **Enrich the FIXABLE ones — from sourced context, never invented (see guardrail).** The
+   user must provide or point you to the driving context (spec, ADR, design doc, exemplar
+   code, the implementation being ported); draft the rewrite against it, present for
+   approval, and **never auto-edit an actively-curated board**. A ticket whose substance
+   can't be sourced is **BLOCKED**, not FIXABLE.
+4. **Surface the BLOCKED ones as decisions**: name what must be decided, by whom, and the
+   blocking ticket/contract — these are inputs the audit produces, not gaps it can close.
+
 ## Guardrails
 
 - State assumptions in every output; never silently inherit someone else's sizing.
@@ -140,3 +169,9 @@ Hand off: tell the user the board is compiled and `/linear-build` can start exec
 - Every borrowed person gets an escape valve named in the same breath as the gain.
 - Review capacity, not build capacity, is the bottleneck of agent-driven delivery — budget
   the humans' review time explicitly when triaging tickets to agents.
+- **Never fabricate ticket context.** Enriching a thin ticket draws only from source the
+  user provides or points you to (spec, ADR, design doc, exemplar code, the implementation
+  being ported) or that you can read in-repo. Plausible-sounding invented context is worse
+  than an empty ticket — it sends an agent down a wrong path with false confidence. If the
+  substance can't be located, the ticket is BLOCKED: name the decision and its owner, don't
+  guess. The human owns the context that drives the decision; the skill structures it.
