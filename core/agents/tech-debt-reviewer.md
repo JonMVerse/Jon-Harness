@@ -2,6 +2,7 @@
 name: tech-debt-reviewer
 description: Use this agent when you need to analyze code quality and identify technical debt across systems, services, or specific files. This agent systematically reviews code for maintainability issues, outdated patterns, performance bottlenecks, security concerns, and architectural problems, then documents findings in a structured markdown report saved to the .debt folder.
 model: inherit
+effort: medium
 color: red
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Fresh-context adversarial verification — tries to REFUTE a claimed outcome by exercising code, running tests, and probing edges before work is called done. Read-and-run only; never fixes. Use PROACTIVELY on any non-trivial change before reporting it complete. Returns CONFIRMED or REFUTED with evidence.
+description: Fresh-context adversarial verification — tries to REFUTE a claimed outcome by exercising code, running tests, and probing edges before work is called done. Read-and-run only; never fixes. Use on any non-trivial change before reporting it complete. Returns CONFIRMED or REFUTED with evidence.
 tools: Read, Glob, Grep, Bash
 model: opus
 effort: medium
