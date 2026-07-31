@@ -1,0 +1,8 @@
+{
+  "name": "typescript-standards",
+  "description": "Makes Claude write Multiverse-conforming TypeScript: an opt-in SessionStart hook that injects the conventions into context before Claude writes code, plus an on-demand review skill with a reference library — and a shared ESLint config carrying the same rules for editor/CI.",
+  "version": "0.2.2",
+  "author": { "name": "Multiverse" },
+  "keywords": ["typescript", "eslint", "conventions", "review", "best-practices", "multiverse"],
+  "skills": ["./skills/review"]
+}

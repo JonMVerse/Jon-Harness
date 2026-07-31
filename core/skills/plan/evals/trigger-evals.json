@@ -1,0 +1,66 @@
+[
+  {
+    "query": "plan this refactor",
+    "should_trigger": true
+  },
+  {
+    "query": "write an implementation plan for the search feature",
+    "should_trigger": true
+  },
+  {
+    "query": "turn those findings into a formal plan",
+    "should_trigger": true
+  },
+  {
+    "query": "let's make a plan before we start building",
+    "should_trigger": true
+  },
+  {
+    "query": "draft a plan for migrating auth to JWT",
+    "should_trigger": true
+  },
+  {
+    "query": "plan the work for adding the notifications panel",
+    "should_trigger": true
+  },
+  {
+    "query": "we've scoped it, now synthesise a plan",
+    "should_trigger": true
+  },
+  {
+    "query": "put together an implementation plan from what we found",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the status of the current plan",
+    "should_trigger": false
+  },
+  {
+    "query": "plan my holiday to Portugal",
+    "should_trigger": false
+  },
+  {
+    "query": "investigate how the caching layer works",
+    "should_trigger": false
+  },
+  {
+    "query": "build it, run the plan with subagents",
+    "should_trigger": false
+  },
+  {
+    "query": "which plans are still in progress",
+    "should_trigger": false
+  },
+  {
+    "query": "review the changes I just made",
+    "should_trigger": false
+  },
+  {
+    "query": "re-plan, this step isn't working",
+    "should_trigger": false
+  },
+  {
+    "query": "commit and open a PR",
+    "should_trigger": false
+  }
+]

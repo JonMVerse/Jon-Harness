@@ -1,0 +1,28 @@
+{
+  "description": "Trigger-precision regression cases for the typescript:review skill. `should_trigger: true` = the skill's description should match; `false` = it must NOT fire (adjacent-but-wrong topics).",
+  "cases": [
+    { "query": "Review my TypeScript types in this PR", "should_trigger": true },
+    { "query": "Is this idiomatic TypeScript?", "should_trigger": true },
+    { "query": "Check this TS file for type-safety issues", "should_trigger": true },
+    { "query": "Should I use an enum or a union here?", "should_trigger": true },
+    { "query": "Help me write a discriminated union for this state", "should_trigger": true },
+    { "query": "How should I validate this API response in TypeScript?", "should_trigger": true },
+    { "query": "Is it safe to cast this with `as`?", "should_trigger": true },
+    { "query": "Add a function that parses the webhook payload (TypeScript)", "should_trigger": true },
+    { "query": "Review the tsconfig strictness for this service", "should_trigger": true },
+    { "query": "typescript review", "should_trigger": true },
+    { "query": "Why is this generic not inferring the return type?", "should_trigger": true },
+    { "query": "Refactor this .ts module to remove the any", "should_trigger": true },
+
+    { "query": "Format this file with Prettier", "should_trigger": false },
+    { "query": "Fix the Biome formatting config", "should_trigger": false },
+    { "query": "Why is my React component re-rendering twice?", "should_trigger": false },
+    { "query": "How do I configure a NestJS module provider?", "should_trigger": false },
+    { "query": "Write a Python script to parse this CSV", "should_trigger": false },
+    { "query": "Add a Drizzle migration for the orders table", "should_trigger": false },
+    { "query": "Deploy the backend service to staging", "should_trigger": false },
+    { "query": "Trigger a Knock notification workflow", "should_trigger": false },
+    { "query": "Set up a GitHub Actions workflow for CI", "should_trigger": false },
+    { "query": "Style this button using the stardust design system", "should_trigger": false }
+  ]
+}

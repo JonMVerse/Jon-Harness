@@ -1,0 +1,16 @@
+{
+  "description": "TypeScript standards — proactive convention injection at session start (opt-in)",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$TYPESCRIPT_STANDARDS_INJECT\" ] && [ \"$TYPESCRIPT_STANDARDS_INJECT\" != 0 ] && [ \"$TYPESCRIPT_STANDARDS_INJECT\" != false ] && node \"${CLAUDE_PLUGIN_ROOT}/scripts/inject-conventions.mjs\" || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
