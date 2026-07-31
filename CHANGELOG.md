@@ -6,6 +6,16 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.12.0] — 2026-07-31
+
+Claude 5 (Opus 5 / Fable 5) prompt migration, applied from the ai-toolkit upstream guide (`docs/claude-5-prompt-migration.md`, Col Mack 2026-07-30). Class-5 models follow restrictive instructions literally and self-verify natively, so the work is mostly *deleting* scaffolding that now suppresses quality.
+
+- **R2 — confidence gate removed from `code-reviewer`.** The `>80%` reporting gate (present in four places) was obeyed literally on Opus 5 and dropped real bugs while `/review` asked for ALL issues. Reviewers now report every finding with a 0–100 confidence score; the `/review` consolidation is the single triage pass (ordered by severity then confidence). The merge verdict rests on confident findings (≥75) — a low-confidence CRITICAL is flagged for a human look rather than blocking on its own. Removes the double-filter (find-time + synthesis-time).
+- **R5 — `PROACTIVELY` invocation language dropped** from `security-reviewer` and `verifier` descriptions. Written to overcome reluctant delegation that Class-5 models no longer exhibit; it compounds with eager delegation to inflate cost. Invocation criteria retained.
+- **R7 — explicit `effort` on all agents.** The six agents that inherited session effort now declare it (11/11 coverage): `code-reviewer`/`security-reviewer` `high`, `code-explorer`/`tech-debt-reviewer`/`test-generator` `medium`, `documentation-generator` `low`. Starting points to be eval-swept, not final.
+
+Not a `core` change but shipped alongside: `plans/` is back in source control (`.gitignore` reverted, `plans/README.md` added).
+
 ## [3.11.0] — 2026-07-23
 
 `delivery-reality-check` gains a standalone **ticket-readiness audit** (Phase 8): lint an existing board's tickets against the agent-ready standard — READY / FIXABLE / BLOCKED — independent of a timeline question, surfacing the thin-and-agent-labelled cluster that wastes executor runs. New guardrail: **never fabricate ticket context** — enrichment draws only from source the user provides or points to (spec / ADR / exemplar code / the implementation being ported); unsourceable substance is BLOCKED with a named decision-owner, not guessed. Triggers extended to "are these tickets ready for agents / which lack context / audit the board".
