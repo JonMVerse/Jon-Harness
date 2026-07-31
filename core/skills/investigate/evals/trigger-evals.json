@@ -1,0 +1,66 @@
+[
+  {
+    "query": "investigate this bug before we touch anything",
+    "should_trigger": true
+  },
+  {
+    "query": "look into how auth sessions are stored",
+    "should_trigger": true
+  },
+  {
+    "query": "find out how the payments flow works before we change it",
+    "should_trigger": true
+  },
+  {
+    "query": "scope out what the export feature touches",
+    "should_trigger": true
+  },
+  {
+    "query": "explore the codebase and map how notifications are sent",
+    "should_trigger": true
+  },
+  {
+    "query": "research where rate limiting is applied across the services",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to understand this area before planning a refactor",
+    "should_trigger": true
+  },
+  {
+    "query": "fan out and figure out how the caching layer is wired up",
+    "should_trigger": true
+  },
+  {
+    "query": "what does this function do",
+    "should_trigger": false
+  },
+  {
+    "query": "plan the refactor of the search module",
+    "should_trigger": false
+  },
+  {
+    "query": "build it, execute the plan",
+    "should_trigger": false
+  },
+  {
+    "query": "investigate why my soufflé collapsed",
+    "should_trigger": false
+  },
+  {
+    "query": "review the code I just wrote",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the failing test in checkout.spec.ts",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the status of the current plans",
+    "should_trigger": false
+  },
+  {
+    "query": "commit these changes and push",
+    "should_trigger": false
+  }
+]

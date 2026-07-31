@@ -6,6 +6,16 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.13.0] — 2026-07-31
+
+Enrichment sync from `ai-toolkit` (`upstream`) — pull in capabilities the org has that this fork lacked, adapted to this harness's preferred agent tier rather than copied verbatim. No shared git history between the repos, so this is change-level porting per the new `PORTING.md`.
+
+- **New skill `investigate`** — parallel read-only discovery: fan out cheap workers to map an unfamiliar area, then consolidate into a verified Findings Brief. Adapted from upstream: its `investigator` (haiku) workers are retargeted to this harness's `scout` agent; `code-explorer`/`verifier` references already match.
+- **New skill `plan`** — synthesise a formal implementation plan (high effort) through the existing plan-mode + `rename-plan` lifecycle. Adapted from upstream: its `implementer`/`build`-stage references are retargeted to this harness's executor tier (`mech-executor`/`executor`) and `/linear-build`, since this fork keeps `linear-build` as its execution path rather than adopting the upstream `build` skill.
+- Suite `marketplace.json` → 1.4.0 (adds the `typescript-standards` plugin below).
+
+Not `core` but shipped alongside (suite-level): **new `typescript-standards` plugin** (v0.2.2, pulled clean from upstream) — opt-in SessionStart convention injection, an on-demand review skill + reference library, and a shared ESLint config. And **`PORTING.md`** + `scripts/upstream-gap.sh` documenting the repeatable enrichment-sync process (layout map, agent-model map, gap-check command).
+
 ## [3.12.0] — 2026-07-31
 
 Claude 5 (Opus 5 / Fable 5) prompt migration, applied from the ai-toolkit upstream guide (`docs/claude-5-prompt-migration.md`, Col Mack 2026-07-30). Class-5 models follow restrictive instructions literally and self-verify natively, so the work is mostly *deleting* scaffolding that now suppresses quality.
