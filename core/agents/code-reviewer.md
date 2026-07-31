@@ -71,6 +71,7 @@ Organize findings by severity. For each issue:
 File: src/api/client.ts:42
 Issue: API key "sk-abc..." exposed in source code. This will be committed to git history.
 Fix: Move to environment variable and add to .gitignore/.env.example
+```
 
 ### Summary Format
 

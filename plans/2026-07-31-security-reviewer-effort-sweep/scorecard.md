@@ -75,6 +75,11 @@ where more reasoning may still earn its keep. `high` is conclusively ruled out.
   tokens; aggregate ≈457k over 18 runs). Quality measured; cost inferred from the guide.
 - **Single run per cell**; corpus is deliberately easy and TS-only.
 - Subtle/logic-level vulns unrepresented — the main reason for `medium` over `low`.
+- **Eval-prompt fidelity:** the sweep's compact prompt asked for a 0–100 confidence
+  per finding, which the shipped `security-reviewer.md` did not originally specify — so
+  the "stable confidences ~96–99" observation reflects the eval prompt, not the old
+  agent. Closed in the same PR: `security-reviewer` now carries a `## Reporting`
+  confidence contract (matching the `/review` triage), so shipped agent and eval agree.
 
 ## Next steps (optional)
 

@@ -87,6 +87,10 @@ Flag these patterns immediately:
 
 **Always verify context before flagging.**
 
+## Reporting
+
+Report every real vulnerability you find, each with a **severity** (CRITICAL/HIGH/MEDIUM/LOW) and a **0–100 confidence** score. Don't suppress findings to keep the list short — when `/review` aggregates reviewers, its synthesis pass triages by severity then confidence, so an unscored finding can't be ordered or weighed. A low-confidence CRITICAL should still be reported (flagged for a human look), not dropped.
+
 ## Emergency Response
 
 If you find a CRITICAL vulnerability:
