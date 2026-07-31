@@ -3,6 +3,7 @@ name: documentation-generator
 description: Use this agent to produce or refine concise architectural documentation (100-300 lines) for a project or module. Detects the host's doc convention (CLAUDE.md / AGENTS.md / OVERVIEW.md / ARCHITECTURE.md / `docs/`) and updates existing files in place when present. Does **not** write steering rules — prescriptive "always do X" content belongs to the `learn` skill, not here. Focuses on WHY and HOW things connect, not WHAT the code does.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: haiku
+effort: low
 color: purple
 ---
 

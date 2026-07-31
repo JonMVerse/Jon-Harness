@@ -3,6 +3,7 @@ name: test-generator
 description: Use this agent to generate high-quality TypeScript unit tests for a target file or directory. Detects the host project's test runner (Jest, Vitest, node:test) and follows the project's documented testing standards.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
+effort: medium
 color: purple
 ---
 
