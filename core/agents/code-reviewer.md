@@ -3,7 +3,7 @@ name: code-reviewer
 description: Reviews code for bugs, logic errors, security vulnerabilities, code quality issues, and adherence to project conventions, reporting every finding with a confidence score for a separate triage pass to filter
 tools: Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput
 model: opus
-effort: high
+effort: medium
 color: red
 ---
 
