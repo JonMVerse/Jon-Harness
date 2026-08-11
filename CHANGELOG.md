@@ -6,6 +6,15 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.14.0] — 2026-08-11
+
+Strengthened the `verifier` agent with two adversarial-probe sections distilled from a wave of Atlas fullscreen PR reviews, where ~30 change-requests collapsed into a handful of repeated blind spots the build+verify loop kept missing:
+
+- **Widen beyond the diff** — trace every helper/predicate to its definition (don't trust the name), open the *other* end of every event/contract boundary (often a different package), ask what else reads a value the change stops writing (other tabs/surfaces/cold-start/later deploy), enumerate error-path siblings, and interrogate fail-open-vs-closed + rollout semantics for flag-gated code.
+- **Falsify the tests, don't count them** — a green suite the builder wrote encodes the builder's blind spots; check the test goes red when the fix is reverted, watch for baseline-shifting shared fixtures/flags, and confirm the done-criteria bug is actually covered.
+
+(Atlas-side companion: the same lessons landed as a "Fullscreen build traps" section in that repo's `client/CLAUDE.md`.)
+
 ## [3.13.0] — 2026-07-31
 
 Enrichment sync from `ai-toolkit` (`upstream`) — pull in capabilities the org has that this fork lacked, adapted to this harness's preferred agent tier rather than copied verbatim. No shared git history between the repos, so this is change-level porting per the new `PORTING.md`.
