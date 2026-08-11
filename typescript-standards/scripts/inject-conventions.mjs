@@ -48,10 +48,13 @@ Immutability & style
 Testing
 - Vitest (no Jest); never \`as any\` a mock — build a reusable typed factory, or mock a minimal typed interface.
 
-Check your work
-- After editing \`.ts\`/\`.tsx\`, run the plugin's shared ESLint config over the changed files and fix what it reports:
+Check your work — through the repo's OWN gates
+- Verify with the commands CI actually runs. Discover them from the repo (\`package.json\` scripts like \`format\`/\`lint\`/\`typecheck\`/\`test\`, a \`Makefile\`, or the CI config) and run them over the whole project, not only the files you touched. A green scoped run hides a shared-module change that broke a sibling test, and hides formatting entirely.
+- ALWAYS run the formatter (Prettier/Biome — \`--write\`/\`--fix\`, then re-check). Unformatted code fails CI even when lint and tests pass.
+- Use the repo's own type-aware lint + typecheck: rules like \`no-unsafe-*\` / \`require-await\` / \`no-floating-promises\` only fire under the project's tsconfig, so a green standalone lint can sit on top of a red CI.
+- The plugin's shared ESLint config below is a SUPPLEMENT for a quick style read — NOT the gate. It's standalone and syntax-only: it does NOT read this repo's ESLint config and does NOT check formatting, so never treat its green as CI-green.
   \`npx eslint --config "${join(PLUGIN_ROOT, "eslint.config.mjs")}" <changed files>\`
-  It's a standalone, syntax-only check — it does NOT read or modify this repo's own ESLint config, and nothing is committed. (Needs \`eslint\` + \`typescript-eslint\` resolvable in the repo; if they aren't, it fails with a clear message — note that and move on.)`;
+  (Needs \`eslint\` + \`typescript-eslint\` resolvable in the repo; if they aren't, note it and move on.)`;
 
 // Dirs never worth scanning for a tsconfig (and slow if we did).
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "out", "coverage", ".next", ".turbo", ".cache"]);

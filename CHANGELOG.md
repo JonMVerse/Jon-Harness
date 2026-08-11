@@ -6,6 +6,14 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.15.0] — 2026-08-11
+
+Close the "false-green gate" gap that let Atlas fullscreen PRs pass agent checks but fail CI on `lint`/`format`. The agents (and the typescript-standards injected guidance) were leaning on the bundled **standalone, syntax-only** ESLint config, which can't run type-aware rules (`no-unsafe-*`, `require-await`) or check formatting — so "eslint clean" sat on top of a red `yarn lint` / `yarn format`.
+
+- **`executor`** — must verify through the repo's OWN gates (the commands CI runs, discovered from `package.json`/Makefile/CI), always run the formatter, and never treat a scoped or standalone lint as the gate.
+- **`verifier`** — new "run the project's real gates" section: run the repo's own `format`/`lint`/`typecheck`/`test` over the whole project (not just touched files), treat the formatter as a gate, and re-run the repo's linter when a claim rests on a standalone one.
+- **typescript-standards `inject-conventions.mjs`** (0.2.2 → 0.2.3) — the injected "Check your work" block now leads with the repo's own gates + "always run the formatter" and demotes the bundled config to an explicit supplement.
+
 ## [3.14.0] — 2026-08-11
 
 Strengthened the `verifier` agent with two adversarial-probe sections distilled from a wave of Atlas fullscreen PR reviews, where ~30 change-requests collapsed into a handful of repeated blind spots the build+verify loop kept missing:

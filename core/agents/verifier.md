@@ -35,6 +35,14 @@ A green suite is a claim, not proof. A test the builder wrote encodes the builde
 - **Check for baseline-shifting fixtures.** A flag flipped in a shared config file, a global seed, or a mutated default can turn the whole suite green (or hide a regression) without testing anything. Confirm the changed path is the reason a test passes.
 - **Confirm the bug in the done-criteria is actually covered** — not just an adjacent happy path.
 
+## Run the project's real gates, not a proxy for them
+
+A change isn't verified until it passes what CI will actually run. Cheap, high-value, and routinely skipped:
+
+- **Run the repo's OWN `format` / `lint` / `typecheck` / `test` scripts** (from `package.json`, `Makefile`, or CI config) — the whole suite, not just the touched files. A green *scoped* run (only the changed test, only the changed file's lint) is the single most common false pass: it hides a shared-module change that broke a sibling test, and it hides formatting entirely.
+- **The formatter is a gate.** Run it in check mode. Unformatted code fails CI even when lint and tests are green — a `--write`-clean claim is not evidence the committed files are formatted.
+- **A syntax-only / standalone linter ≠ the repo's linter.** Type-aware rules (`no-unsafe-*`, `require-await`, `no-floating-promises`) only fire under the project's tsconfig-backed config; a standalone config reports clean while the real `lint` script is red. If the claim rests on a standalone linter, re-run the repo's own script and believe that instead.
+
 ## Output format
 
 ```
