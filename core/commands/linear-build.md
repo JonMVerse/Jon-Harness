@@ -190,7 +190,13 @@ set *before* batch selection, since per-ticket scouting happens later):
 
 10. **Judge the final output — LLM-as-judge on the diff.** The build-cycle counterpart of the
     plan panel: fan out `code-reviewer`, `security-reviewer`, and `tech-debt-reviewer` in
-    parallel over the built diff (as `/review` does) and consolidate by severity. Blocking
+    parallel over the built diff (as `/review` does) and consolidate by severity.
+    **Materialise the diff in the reviewers' working tree first** — check out the branch (or
+    apply the patch) so a reviewer *without* a shell / `git show` judges the actual change,
+    not the pre-change baseline. A judge that reports it could only read the baseline (or
+    returns a verdict "contingent on the unseen diff") has NOT completed a pass — re-run it
+    against the materialised change, or resolve the contingent item yourself before trusting
+    the verdict. Blocking
     findings go back to the executor; re-verify after fixes. Two review rounds with blocking
     findings still standing → same treatment as double refutation: ticket back to unstarted
     with the evidence, stop, and surface to the user. Only a diff that has survived **both**

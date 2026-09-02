@@ -6,6 +6,11 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.16.1] — 2026-09-02
+
+### Fixed
+- **`/linear-build` output-judge (step 10): materialise the diff first.** The `code-reviewer` (and any reviewer without a shell / `git show`) cannot inspect a committed-but-unmaterialised diff, so it silently reasons from the pre-change baseline and returns verdicts "contingent on the unseen diff." Step 10 now requires checking out the branch / applying the patch into the reviewers' working tree before the fan-out, and treats a baseline-only or contingent verdict as an incomplete pass (re-run against the materialised change, or resolve the contingent item before trusting it). Surfaced on the 2 Sep 2026 run, where the code judge returned baseline-only verdicts on three diffs.
+
 ## [3.16.0] — 2026-09-02
 
 ### Changed
