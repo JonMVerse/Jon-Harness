@@ -6,6 +6,11 @@ suite-level `marketplace.json` version moves independently and is noted where re
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.16.0] — 2026-09-02
+
+### Changed
+- **`/linear-build` — judge-gated plan/build loop.** The plan stage now *stages* a draft, then runs an **LLM-as-judge panel** — three independent, code-grounded judges (**security · scope/design · risk & verification**) returning SOUND/AMEND/REJECT — and **rewrites-and-re-runs until it passes** before any human sees it. The human then green-lights the *panel-verified* plan, and — **separately and explicitly** — permits the PR push (never auto-pushed). The build cycle keeps executor + verifier and adds a **judge on the final diff** (`code`/`security`/`tech-debt` reviewers). Plans must now specify a **non-vacuous test ladder from unit → integration → e2e** and the **language/framework standards + skills** to honour (e.g. `typescript-standards`, `a11y-audit`), both enforced by the executor and the judges. Decisions are reported **verbosely and Socratically** so a run doubles as a learning journey for the human. Origin: the 2 Sep 2026 Full Screen Atlas run, where a plan panel caught a zero-h1 a11y regression and an open-PR file collision before any code was written.
+
 ## [3.15.0] — 2026-08-11
 
 Close the "false-green gate" gap that let Atlas fullscreen PRs pass agent checks but fail CI on `lint`/`format`. The agents (and the typescript-standards injected guidance) were leaning on the bundled **standalone, syntax-only** ESLint config, which can't run type-aware rules (`no-unsafe-*`, `require-await`) or check formatting — so "eslint clean" sat on top of a red `yarn lint` / `yarn format`.
